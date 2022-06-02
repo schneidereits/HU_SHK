@@ -12,7 +12,7 @@ library(patchwork)
 
 # CSO number
  
-link <- "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_NUM.vrt.ovr"
+link <- "data/1982-2021_091-319-12_HL_CSO_LNDLG/1982-2021_091-319-12_HL_CSO_LNDLG_NUM.vrt.ovr"
 CSO_NUM <- rast(link)
 years <- c(1982:2021)
 names(CSO_NUM) <- years
@@ -20,19 +20,28 @@ names(CSO_NUM) <- years
 years <- seq(as.Date('1982-01-01'), as.Date('2021-01-01'), by='year')
 time(CSO_NUM) <-  years
 
+# compute summerized maps
+# full time series
+CSO_NUM_mean_1984_2021 <- mean(CSO_NUM[[c(2:40)]])
+save(CSO_NUM_mean_1984_2021, file = "data/CSO_NUM_mean_1984_2021.RData")
+
+# reduced timeseries for data limited time frame
+CSO_NUM_mean_1984_2012 <- mean(CSO_NUM[[c(2:29)]])
+save(CSO_NUM_mean_1984_2012, file = "data/CSO_NUM_mean_1984_2012.RData")
+
 #writeRaster(CSO_NUM, "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_NUM",
 #            filetype='GTiff')
 
 # crop rater to speed up data exporlation and vis
-e <- ext(0.4, 0.9, 0.4, 0.9)
-CSO_NUM <- crop(CSO_NUM, e)
+#e <- ext(0.4, 0.9, 0.4, 0.9)
+#CSO_NUM <- crop(CSO_NUM, e)
 
 # test plot of map
 plot(CSO_NUM[[20]], legend=F, col = viridis(n=30,option="D"), range=c(0,35))
 
 # CSO Average
 
-link <- "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_AVG.vrt.ovr"
+link <- "data/1982-2021_091-319-12_HL_CSO_LNDLG/1982-2021_091-319-12_HL_CSO_LNDLG_AVG.vrt.ovr"
 CSO_AVG <- rast(link)
 years <- c(1982:2021)
 names(CSO_AVG) <- years
@@ -42,6 +51,9 @@ time(CSO_AVG) <-  years
 
 # test plot of map
 plot(CSO_AVG[[20]], legend=F, col = viridis(n=30,option="D"), range=c(0,365))
+
+CSO_AVG_mean <- mean(CSO_AVG)
+save(CSO_AVG_mean, file = "data/CSO_AVG_mean.RData")
 
 # Sentinal 2 CSO number
 

@@ -27,3 +27,5 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 scripts_git.Rproj
+HU_SHK.Rproj
+data
