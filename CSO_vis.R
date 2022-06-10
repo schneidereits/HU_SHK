@@ -40,7 +40,7 @@ plot(CSO_NUM[[20]], legend=F, col = viridis(n=30,option="D"), range=c(0,35))
 #             datatype = "INT4S",
 #             filetype='GTiff')
 
-link <- 'data/CSO_NUM_mean_1984_2021.tif'
+link <- 'data/1982-2021_091-319-12_HL_CSO_LNDLG/CSO_NUM_mean_1984_2021.tif'
 CSO_NUM_mean_1984_2021 <- rast(link)
 rasterVis::levelplot(CSO_NUM_mean_1984_2021, par.settings = viridisTheme)
 
@@ -58,19 +58,26 @@ time(CSO_AVG) <-  years
 # test plot of map
 plot(CSO_AVG[[20]], legend=F, col = viridis(n=30,option="D"), range=c(0,365))
 
+
+### summarized maps ----
+
+# create mask for areas with no observations
+non_zero_mask <-  CSO_AVG[[3:33]]=365
+CSO_AVG_non_zero <- mask(CSO_AVG, non_zero_mask, maskvalue=0)
+
 # CSO_AVG_mean <- mean(CSO_AVG)
-# writeRaster(CSO_AVG_mean, "data/CSO_AVG_mean.tif",
+# writeRaster(CSO_AVG_mean, "data/1982-2021_091-319-12_HL_CSO_LNDLG/CSO_AVG_mean.tif",
 #             overwrite=TRUE,
 #             datatype = "INT4S",
 #             filetype='GTiff')
 
-link <- 'data/CSO_AVG_mean.tif'
-CSO_AVG_mean <- rast(link)
-rasterVis::levelplot(CSO_AVG_mean, par.settings = viridisTheme)
+link <- 'data/1982-2021_091-319-12_HL_CSO_LNDLG/CSO_AVG_mean.tif'
+CSO_AVG_mean_1984_2021 <- rast(link)
+rasterVis::levelplot(CSO_AVG_mean_1984_2021, par.settings = viridisTheme)
 
-### summarized maps ----
+
 # create mask for areas with no observations
-non_zero_mask <-  CSO_AVG_mean<191
+non_zero_mask <-  CSO_AVG[[3:33]]<191
 CSO_AVG_non_zero <- mask(CSO_AVG_mean, non_zero_mask, maskvalue=0)
 # save tif for avg with no observation
 # writeRaster(CSO_AVG_non_zero, "data/1982-2021_091-319-12_HL_CSO_LNDLG/CSO_AVG_non_zero.tif",
@@ -113,7 +120,7 @@ CSO_MIN_mean_1984_2021 <- mean(CSO_MIN[[c(2:40)]])
 #             datatype = "INT4S",
 #             filetype='GTiff')
 
-link <- 'data/CSO_MIN_mean_1984_2021.tif'
+link <- 'data/1982-2021_091-319-12_HL_CSO_LNDLG/CSO_MIN_mean_1984_2021.tif'
 CSO_MIN_mean_1984_2021 <- rast(link)
 rasterVis::levelplot(CSO_MIN_mean_1984_2021, par.settings = viridisTheme)
 
@@ -142,6 +149,13 @@ time(CSO_MAX) <-  years
 # test plot of map
 plot(CSO_MAX[[20]], legend=F, col = viridis(n=30,option="D"), range=c(1,364))
 
+# image loop to create gif
+for (i in 3:40){
+  
+  plot(CSO_NUM[[i]], legend=F, col = viridis(n=30,option="D"), range=c(0,35))
+  
+}
+
 ### summarized maps ----
 #  compute summarized maps
 # full time series
@@ -152,7 +166,7 @@ CSO_MAX_mean_1984_2021 <- mean(CSO_MAX[[c(2:40)]])
 #             datatype = "INT4S",
 #             filetype='GTiff')
 
-link <- 'data/CSO_MAX_mean_1984_2021.tif'
+link <- 'data/1982-2021_091-319-12_HL_CSO_LNDLG/CSO_MAX_mean_1984_2021.tif'
 CSO_MAX_mean_1984_2021 <- rast(link)
 rasterVis::levelplot(CSO_MAX_mean_1984_2021, par.settings = viridisTheme)
 
@@ -162,6 +176,19 @@ non_zero_mask <-  CSO_MAX_mean_1984_2021<191
 CSO_MAX_non_zero <- mask(CSO_MAX_mean_1984_2021, non_zero_mask, maskvalue=0)
 
 rasterVis::levelplot(CSO_MAX_non_zero, par.settings = viridisTheme)
+
+# map output plot ----
+
+rasterVis::levelplot(CSO_NUM_mean_1984_2021,at=c(seq(0, 15, 1)), par.settings = viridisTheme)
+rasterVis::levelplot(CSO_AVG_mean_1984_2021,at=c(seq(0, 100, 1)), par.settings = viridisTheme)
+rasterVis::levelplot(CSO_MIN_mean_1984_2021,at=c(seq(0, 60, 1)), par.settings = viridisTheme)
+rasterVis::levelplot(CSO_MAX_mean_1984_2021,at=c(seq(100, 191, 2)), par.settings = viridisTheme)
+
+stack <- c(CSO_NUM_mean_1984_2021, CSO_AVG_mean_1984_2021, CSO_MIN_mean_1984_2021, CSO_MAX_mean_1984_2021)
+rasterVis::levelplot(stack,
+                     #at=c(seq(0, 191, 2)), 
+                     par.settings = viridisTheme)
+plot(stack, legend=T, col = viridis(n=30,option="D"))
 
 # base visualisation ----
 ## landsat ----
@@ -214,7 +241,7 @@ hist(CSO_AVG[[c(19:35)]], main = "CSO count", xlab = "n", ylab= "Frequency",
 
 
 # Sentinal 2 ----
-# Sentinal 2 CSO number
+## NUM ----
 
 link <- "data/2017-2021_091-319-12_HL_CSO_SEN2/2017-2021_091-319-12_HL_CSO_SEN2L_NUM.vrt.ovr"
 CSO_NUM_S2 <- rast(link) 
@@ -230,18 +257,18 @@ plot(CSO_NUM_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
 ### summarized map ----
 #  compute summarized maps
 # full time series
-CSO_NUM_S2_mean <- mean(CSO_NUM_S2)
-# # to save
-writeRaster(CSO_NUM_S2_mean, "data/CSO_NUM_S2_mean.tif",
-            overwrite=TRUE,
-            datatype = "INT4S",
-            filetype='GTiff')
+# CSO_NUM_S2_mean <- mean(CSO_NUM_S2)
+# # # to save
+# writeRaster(CSO_NUM_S2_mean, "data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_NUM_S2_mean.tif",
+#             overwrite=TRUE,
+#             datatype = "INT4S",
+#             filetype='GTiff')
 
 link <- 'data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_NUM_S2_mean.tif'
-CSO_NUM_mean_1984_2021 <- rast(link)
-rasterVis::levelplot(CSO_NUM_mean_1984_2021, par.settings = viridisTheme)
+CSO_NUM_S2_mean <- rast(link)
+rasterVis::levelplot(CSO_NUM_S2_mean, par.settings = viridisTheme)
 
-# Sentinal 2 CSO AVG
+## AVG ----
 
 link <- "data/2017-2021_091-319-12_HL_CSO_SEN2/2017-2021_091-319-12_HL_CSO_SEN2L_AVG.vrt.ovr"
 CSO_AVG_S2 <- rast(link) 
@@ -257,70 +284,77 @@ plot(CSO_AVG_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
 ### summarized map ----
 #  compute summarized maps
 # full time series
-CSO_AVG_S2_mean <- mean(CSO_AVG_S2)
-# # to save
-writeRaster(CSO_AVG_S2_mean, "data/CSO_AVG_S2_mean.tif",
-            overwrite=TRUE,
-            datatype = "INT4S",
-            filetype='GTiff')
+# CSO_AVG_S2_mean <- mean(CSO_AVG_S2)
+# # # to save
+# writeRaster(CSO_AVG_S2_mean, "data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_AVG_S2_mean.tif",
+#             overwrite=TRUE,
+#             datatype = "INT4S",
+#             filetype='GTiff')
 
 link <- 'data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_AVG_S2_mean.tif'
-CSO_AVG_mean_1984_2021 <- rast(link)
-rasterVis::levelplot(CSO_AVG_mean_1984_2021, par.settings = viridisTheme)
+CSO_AVG_S2_mean <- rast(link)
+rasterVis::levelplot(CSO_AVG_S2_mean, par.settings = viridisTheme)
 
-# Sentinal 2 CSO MIN ----
+## MIN ----
 
-link <- "data/2017-2021_091-319-12_HL_CSO_SEN2/2017-2021_091-319-12_HL_CSO_SEN2L_NUM.vrt.ovr"
-CSO_NUM_S2 <- rast(link) 
+link <- "data/2017-2021_091-319-12_HL_CSO_SEN2/2017-2021_091-319-12_HL_CSO_SEN2L_MIN.vrt.ovr"
+CSO_MIN_S2 <- rast(link) 
 years <- c(2017:2021)
-names(CSO_NUM_S2) <- years
+names(CSO_MIN_S2) <- years
 # add z component
 years <- seq(as.Date('2017-01-01'), as.Date('2021-01-01'), by='year')
-time(CSO_NUM_S2) <-  years
+time(CSO_MIN_S2) <-  years
 
 # test plot of map
-plot(CSO_NUM_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
+plot(CSO_MIN_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
 
 ### summarized map ----
 #  compute summarized maps
 # full time series
-CSO_NUM_S2_mean <- mean(CSO_NUM_S2)
-# # to save
-writeRaster(CSO_NUM_S2_mean, "data/CSO_NUM_S2_mean.tif",
-            overwrite=TRUE,
-            datatype = "INT4S",
-            filetype='GTiff')
+# CSO_MIN_S2_mean <- mean(CSO_MIN_S2)
+# # # to save
+# writeRaster(CSO_MIN_S2_mean, "data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_MIN_S2_mean.tif",
+#             overwrite=TRUE,
+#             datatype = "INT4S",
+#             filetype='GTiff')
 
-link <- 'data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_NUM_S2_mean.tif'
-CSO_NUM_mean_1984_2021 <- rast(link)
-rasterVis::levelplot(CSO_NUM_mean_1984_2021, par.settings = viridisTheme)
+link <- 'data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_MIN_S2_mean.tif'
+CSO_MIN_S2_mean <- rast(link)
+rasterVis::levelplot(CSO_MIN_S2_mean, par.settings = viridisTheme)
 
-# Sentinal 2 CSO MAX ----
+## MAX ----
 
-link <- "data/2017-2021_091-319-12_HL_CSO_SEN2/2017-2021_091-319-12_HL_CSO_SEN2L_NUM.vrt.ovr"
-CSO_NUM_S2 <- rast(link) 
+link <- "data/2017-2021_091-319-12_HL_CSO_SEN2/2017-2021_091-319-12_HL_CSO_SEN2L_MAX.vrt.ovr"
+CSO_MAX_S2 <- rast(link) 
 years <- c(2017:2021)
-names(CSO_NUM_S2) <- years
+names(CSO_MAX_S2) <- years
 # add z component
 years <- seq(as.Date('2017-01-01'), as.Date('2021-01-01'), by='year')
-time(CSO_NUM_S2) <-  years
+time(CSO_MAX_S2) <-  years
 
 # test plot of map
-plot(CSO_NUM_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
+plot(CSO_MAX_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
 
 ### summarized map ----
 #  compute summarized maps
 # full time series
-CSO_NUM_S2_mean <- mean(CSO_NUM_S2)
-# # to save
-writeRaster(CSO_NUM_S2_mean, "data/CSO_NUM_S2_mean.tif",
-            overwrite=TRUE,
-            datatype = "INT4S",
-            filetype='GTiff')
+# CSO_MAX_S2_mean <- mean(CSO_MAX_S2)
+# # # to save
+# writeRaster(CSO_MAX_S2_mean, "data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_MAX_S2_mean.tif",
+#             overwrite=TRUE,
+#             datatype = "INT4S",
+#             filetype='GTiff')
 
-link <- 'data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_NUM_S2_mean.tif'
-CSO_NUM_mean_1984_2021 <- rast(link)
-rasterVis::levelplot(CSO_NUM_mean_1984_2021, par.settings = viridisTheme)
+link <- 'data/2017-2021_091-319-12_HL_CSO_SEN2/CSO_MAX_S2_mean.tif'
+CSO_MAX_S2_mean <- rast(link)
+rasterVis::levelplot(CSO_MAX_S2_mean, par.settings = viridisTheme)
+
+# map output plot ----
+
+rasterVis::levelplot(CSO_NUM_S2_mean,at=c(seq(0, 70, 5)), par.settings = viridisTheme)
+rasterVis::levelplot(CSO_AVG_S2_mean,at=c(seq(0, 70, 5)), par.settings = viridisTheme)
+rasterVis::levelplot(CSO_MIN_S2_mean,at=c(seq(0, 70, 5)), par.settings = viridisTheme)
+rasterVis::levelplot(CSO_MAX_S2_mean,at=c(seq(0, 191, 5)), par.settings = viridisTheme)
 
 
 
@@ -366,7 +400,7 @@ df_CSO_LND <- cbind(df_CSO_NUM_long, df_CSO_AVG_long[,2]) %>%
   cbind(df_CSO_MAX_long[,2]) %>% 
   pivot_longer(cols = c(NUM:MAX), names_to = "variable", values_to = "value")
 
-df_CSO_LND <- saveRDS(df_CSO_LND, file = "data/df_CSO_LND.rds")
+saveRDS(df_CSO_LND, file = "data/df_CSO_LND.rds")
 
 ## time series ---- 
 ggplot(df_CSO_LND[1:1000,], aes(year, value, color=value)) +
@@ -380,7 +414,7 @@ ggplot(df_CSO_LND[1:1000,], aes(year, value, color=value)) +
 
 # make list of plots
 ggList <- lapply(split(df_CSO_LND, df_CSO_LND$variable)[c(4,1,2,3)], function(i) {
-  ggplot(i[1:1000,], aes(year, value, color=value)) +
+  ggplot(i, aes(year, value, color=value)) +
     geom_point() +
     geom_jitter(width = 0.5, height = 0.5) +
     scale_colour_viridis_c(option = "D") +
@@ -391,14 +425,10 @@ ggList <- lapply(split(df_CSO_LND, df_CSO_LND$variable)[c(4,1,2,3)], function(i)
   }
   )
 
-# plot as grid in 1 columns
+# plot as grid in 2 columns
 cowplot::plot_grid(plotlist = ggList, ncol = 2,
                    align = 'v', labels = levels(df_CSO_LND$variable))
   
-
-ggplot(df_CSO_NUM_long, aes(x,y)) +
-  geom_point() +
-  theme_minimal()
 
 # time series 
 (ts_AVG <- ggplot(df_CSO_NUM_long, aes(year, NUM, color=NUM)) +
@@ -409,7 +439,24 @@ ggplot(df_CSO_NUM_long, aes(x,y)) +
     scale_y_continuous(expand = c(0, 0), limits = c(-5, 50)) +
     theme(axis.text.x = element_text(angle = 45)))
 
-# box
+## box plot ----
+
+ggList <- lapply(split(df_CSO_LND, df_CSO_LND$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(year, value, color=value)) +
+    geom_boxplot(#notch = TRUE
+    ) +
+    #geom_jitter() +
+    scale_colour_viridis_c(option = "D") +
+    labs(title = paste(i$variable[1])) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45)) 
+}
+)
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_LND$variable))
+
+
 ggplot(df_CSO_NUM_long, aes(year, NUM, color=NUM)) +
   geom_boxplot(#notch = TRUE
                ) +
@@ -425,17 +472,39 @@ ggplot(df_CSO_NUM_long, aes(year, NUM, color=NUM)) +
   theme_minimal()
 
 
-# density
-(density_AVG <- ggplot(df_CSO_NUM_long, aes(NUM, color=year, fill=year)) +
+## density ----
+(density_AVG <- ggplot(df_CSO_LND, aes(value, color=year, fill=year)) +
   geom_density(alpha = 0.05) +
   #geom_jitter() +
   scale_colour_viridis_d(option = "D") +
   scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, 30)) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 191)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.2)) +
   theme_minimal() +
   guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom") )
+  theme(legend.position = "bottom")  +
+  facet_wrap(~variable))
+
+
+ggList <- lapply(split(df_CSO_LND, df_CSO_LND$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(value, color=year, fill=year)) +
+    geom_density(alpha = 0.05) +
+    #geom_jitter() +
+    scale_colour_viridis_d(option = "D") +
+    scale_fill_viridis_d(option = "D") +
+    #scale_x_continuous(expand = c(0, 0), limits = c(0, 191)) +
+    scale_y_continuous(expand = c(0, 0), limits = c(0, 0.2)) +
+    theme_minimal() +
+    guides(col = guide_legend(nrow = 3))+
+    labs(title = paste(i$variable[1])) +
+    theme(legend.position = "bottom")  +
+    scale_x_continuous(expand = c(0, 0)) +
+    facet_wrap(~variable)
+}
+)
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_LND$variable))
 
 
 # density facet
@@ -450,7 +519,8 @@ ggplot(df_CSO_NUM_long, aes(NUM, color=year, fill=year)) +
   guides(col = guide_legend(nrow = 3))+
   theme(legend.position = "bottom") + 
   facet_wrap(~year)
-  
+
+## ridges ----
 
 (ridges_AVG <- ggplot(df_CSO_NUM_long, aes(x = NUM, y = year, fill = stat(x))) +
   geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
@@ -458,25 +528,95 @@ ggplot(df_CSO_NUM_long, aes(NUM, color=year, fill=year)) +
   scale_x_continuous(expand = c(0, 0), limits = c(0, 40)) +
   theme_minimal() )
 
-### AVG ----
+
+ggList <- lapply(split(df_CSO_LND, df_CSO_LND$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(value, year, fill = stat(x))) +
+    geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+    scale_fill_viridis_c(name = "Number of CSO", option = "D") +
+    labs(title = paste(i$variable[1])) +
+    scale_x_continuous(expand = c(0, 0)) +
+    theme_minimal()
+}
+)
+
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_LND$variable))
+
+
+
+# sentinal 2 ----
+
 
 # conversion of SpatRaster to df
-#df_CSO_NUM_wide <- CSO_AVG[[c(3:40)]] %>% as.data.frame(xy = TRUE)
+#df_CSO_NUM_wide <- CSO_NUM[[c(3:40)]] %>% as.data.frame(xy = TRUE)
 
 # random subset sample 
-CSO_AVG_subset <- spatSample(CSO_AVG, size=1000, method="random", replace=FALSE, xy=T)
+set.seed(42)
+CSO_NUM_S2_subset <- spatSample(CSO_NUM_S2, size=1000, method="random", replace=FALSE, xy=T)
+CSO_AVG_S2_subset <- spatSample(CSO_AVG_S2, size=1000, method="random", replace=FALSE, xy=T)
+CSO_MIN_S2_subset <- spatSample(CSO_MIN_S2, size=1000, method="random", replace=FALSE, xy=T)
+CSO_MAX_S2_subset <- spatSample(CSO_MAX_S2, size=1000, method="random", replace=FALSE, xy=T)
 
-df_CSO_AVG_long <- CSO_AVG_subset %>% 
-  select(-X1982, -X1983) %>% 
-  pivot_longer(cols= c(X1984:X2021), names_to = "year", values_to = "AVG") %>% 
+df_CSO_NUM_S2_long <- CSO_NUM_S2_subset %>% 
+  select(-x,-y) %>% 
+  pivot_longer(cols= c(X2017:X2021), names_to = "year", values_to = "NUM") %>% 
   mutate(year = str_remove(year, "X"))
 
-ggplot(df_CSO_AVG_long, aes(x,y)) +
+df_CSO_AVG_S2_long <- CSO_AVG_S2_subset %>% 
+  select(-x,-y) %>% 
+  pivot_longer(cols= c(X2017:X2021), names_to = "year", values_to = "AVG") %>% 
+  mutate(year = str_remove(year, "X"))
+
+df_CSO_MIN_S2_long <- CSO_MIN_S2_subset %>% 
+  select(-x,-y) %>% 
+  pivot_longer(cols= c(X2017:X2021), names_to = "year", values_to = "MIN") %>% 
+  mutate(year = str_remove(year, "X"))
+
+df_CSO_MAX_S2_long <- CSO_MAX_S2_subset %>% 
+  select(-x,-y) %>% 
+  pivot_longer(cols= c(X2017:X2021), names_to = "year", values_to = "MAX") %>% 
+  mutate(year = str_remove(year, "X"))
+
+
+df_CSO_S2 <- cbind(df_CSO_NUM_S2_long, df_CSO_AVG_S2_long[,2]) %>% 
+  cbind(df_CSO_MIN_S2_long[,2]) %>% 
+  cbind(df_CSO_MAX_S2_long[,2]) %>% 
+  pivot_longer(cols = c(NUM:MAX), names_to = "variable", values_to = "value")
+
+
+saveRDS(df_CSO_S2, file = "data/df_CSO_S2.rds")
+
+## time series ---- 
+ggplot(df_CSO_S2[1:1000,], aes(year, value, color=value)) +
   geom_point() +
-  theme_minimal()
+  geom_jitter(width = 0.5, height = 0.5) +
+  scale_colour_viridis_c(option = "D") +
+  theme_minimal() +
+  # scale_y_continuous(expand = c(0, 0), limits = c(-5, 50)) +
+  theme(axis.text.x = element_text(angle = 45)) +
+  facet_wrap(~variable, scales = "free")
+
+# make list of plots
+ggList <- lapply(split(df_CSO_S2, df_CSO_S2$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(year, value, color=value)) +
+    geom_point() +
+    geom_jitter(width = 0.5, height = 0.5) +
+    scale_colour_viridis_c(option = "D") +
+    theme_minimal() +
+    labs(title = paste(i$variable[1])) +
+    # scale_y_continuous(expand = c(0, 0), limits = c(-5, 50)) +
+    theme(axis.text.x = element_text(angle = 45))
+}
+)
+
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_S2$variable))
+
 
 # time series 
-(ts_AVG <- ggplot(df_CSO_AVG_long, aes(year, AVG, color=AVG)) +
+(ts_AVG <- ggplot(df_CSO_NUM_long, aes(year, NUM, color=NUM)) +
     geom_point() +
     geom_jitter(width = 0.5, height = 0.5) +
     scale_colour_viridis_c(option = "D") +
@@ -484,8 +624,25 @@ ggplot(df_CSO_AVG_long, aes(x,y)) +
     scale_y_continuous(expand = c(0, 0), limits = c(-5, 50)) +
     theme(axis.text.x = element_text(angle = 45)))
 
-# box
-ggplot(df_CSO_AVG_long, aes(year, AVG, color=AVG)) +
+## box plot ----
+
+ggList <- lapply(split(df_CSO_S2, df_CSO_S2$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(year, value, color=value)) +
+    geom_boxplot(#notch = TRUE
+    ) +
+    #geom_jitter() +
+    scale_colour_viridis_c(option = "D") +
+    labs(title = paste(i$variable[1])) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45)) 
+}
+)
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_S2$variable))
+
+
+ggplot(df_CSO_NUM_long, aes(year, NUM, color=NUM)) +
   geom_boxplot(#notch = TRUE
   ) +
   #geom_jitter() +
@@ -493,28 +650,51 @@ ggplot(df_CSO_AVG_long, aes(year, AVG, color=AVG)) +
   theme_minimal()
 
 # violin
-ggplot(df_CSO_AVG_long, aes(year, AVG, color=AVG)) +
+ggplot(df_CSO_NUM_long, aes(year, NUM, color=NUM)) +
   geom_violin() +
   #geom_jitter() +
   scale_colour_viridis_c(option = "D") +
   theme_minimal()
 
 
-# density
-(density_AVG <- ggplot(df_CSO_AVG_long, aes(AVG, color=year, fill=year)) +
+## density ----
+(density_AVG <- ggplot(df_CSO_S2, aes(value, color=year, fill=year)) +
+   geom_density(alpha = 0.05) +
+   #geom_jitter() +
+   scale_colour_viridis_d(option = "D") +
+   scale_fill_viridis_d(option = "D") +
+   scale_x_continuous(expand = c(0, 0), limits = c(0, 191)) +
+   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.2)) +
+   theme_minimal() +
+   guides(col = guide_legend(nrow = 3))+
+   theme(legend.position = "bottom",
+         plot.title = element_text(size=20))  +
+   facet_wrap(~variable))
+
+
+ggList <- lapply(split(df_CSO_S2, df_CSO_S2$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(value, color=year, fill=year)) +
     geom_density(alpha = 0.05) +
     #geom_jitter() +
     scale_colour_viridis_d(option = "D") +
     scale_fill_viridis_d(option = "D") +
-    scale_x_continuous(expand = c(0, 0), limits = c(0, 30)) +
+    #scale_x_continuous(expand = c(0, 0), limits = c(0, 191)) +
     scale_y_continuous(expand = c(0, 0), limits = c(0, 0.2)) +
     theme_minimal() +
     guides(col = guide_legend(nrow = 3))+
-    theme(legend.position = "bottom") )
+    labs(title = paste(i$variable[1])) +
+    theme(legend.position = "bottom")  +
+    scale_x_continuous(expand = c(0, 0)) +
+    facet_wrap(~variable)
+}
+)
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_S2$variable))
 
 
 # density facet
-ggplot(df_CSO_AVG_long, aes(AVG, color=year, fill=year)) +
+ggplot(df_CSO_NUM_long, aes(NUM, color=year, fill=year)) +
   geom_density(alpha = 0.05) +
   #geom_jitter() +
   scale_colour_viridis_d(option = "D") +
@@ -526,15 +706,40 @@ ggplot(df_CSO_AVG_long, aes(AVG, color=year, fill=year)) +
   theme(legend.position = "bottom") + 
   facet_wrap(~year)
 
+## ridges ----
 
-(ridges_AVG <- ggplot(df_CSO_AVG_long, aes(x = AVG, y = year, fill = stat(x))) +
+ggplot(df_CSO_S2, aes(value, year, fill = stat(x))) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+  scale_fill_viridis_c(name = "Number of CSO", option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_minimal() +
+  facet_wrap(~variable)
+
+ggList <- lapply(split(df_CSO_S2, df_CSO_S2$variable)[c(4,1,2,3)], function(i) {
+  ggplot(i, aes(value, year, fill = stat(x))) +
     geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
-    scale_fill_viridis_c(name = "Avergage days between CSO", option = "D") +
-    scale_x_continuous(expand = c(0, 0), limits = c(0, 40)) +
-    theme_minimal() )
+    scale_fill_viridis_c(name = "Number of CSO", option = "D") +
+    labs(title = paste(i$variable[1])) +
+    scale_x_continuous(expand = c(0, 0)) +
+    theme_minimal()
+}
+)
+
+# plot as grid in 2 columns
+cowplot::plot_grid(plotlist = ggList, ncol = 2,
+                   align = 'v', labels = levels(df_CSO_S2$variable))
 
 
-## sentinal 2 ----
+
+
+
+
+
+
+
+##### old code ----
+
+
 
 # random subset sample 
 CSO_S2_subset <- spatSample(CSO_S2, size=8000, method="random", replace=FALSE, xy=T)
