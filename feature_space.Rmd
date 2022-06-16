@@ -1,19 +1,32 @@
-#library----
+---
+title: "feature_space"
+author: "Shawn Schneidereit"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r setup, include=FALSE}
+# library
 library(terra)
 #library(sf)
 library(viridis)
 library(tidyverse)
 library(patchwork)
 library(ggridges)
+knitr::opts_chunk$set(echo = TRUE)
+```
 
+
+```{r, include=FALSE}
 # data import and wrangel ----
 
 raw_fs <- read.csv("data/feature_space/20220602_FS_LS4_LS5_LS7_LS8_LS9_1985_2022.csv")
 
+```
+
 ## QA band filtering ----
 
 ### Read QA band
-
+```{r, include=FALSE}
 ### What are the three most frequent values in the qa band?
 raw_fs %>% group_by(QAI) %>% tally() %>% arrange(-n)
 
@@ -21,8 +34,11 @@ raw_fs %>% group_by(QAI) %>% tally() %>% arrange(-n)
 rev(as.numeric(intToBits(8192)[1:16]))  
 rev(as.numeric(intToBits(0)[1:16])) 
 rev(as.numeric(intToBits(10240)[1:16]))  
+```
 
-# a) high confidence clouds or high confidence cloud shadows or fill values
+# filtering function
+```{r}
+# high confidence clouds or high confidence cloud shadows or fill values
 mask_medconf <- function(x){
   bs <- intToBits(x)
   if ( ((bs[1]) | # cloud
@@ -39,6 +55,8 @@ mask_medconf <- function(x){
     }
 }
 
+
+
 # due to the nature of the intToBits function it is not possible to perform 
 # this step in a mutate pipe. Therefor a vector is created via lapply, 
 # joined to then joined to the fs_LND df and finally flaged pixels can be removed
@@ -47,27 +65,45 @@ mask_idex <- lapply(raw_fs$QAI, mask_medconf) %>% unlist()
 fs_LND_filtered <- raw_fs %>%
   mutate(QAI = mask_idex) %>% 
   filter(QAI == "valid")
+```
 
+
+```{r, eval=FALSE}
 # Katja´s method to filter QAI values
-raw_fs$qa_cloud <- bitwAnd(bitwShiftR(raw_fs$QAI, 1), 3)
-raw_fs$qa_shadow <- bitwAnd(bitwShiftR(raw_fs$QAI, 3), 1)
-raw_fs$qa_snow <- bitwAnd(bitwShiftR(raw_fs$QAI, 4), 1)
-raw_fs$qa_water <- bitwAnd(bitwShiftR(raw_fs$QAI, 5), 1)
-raw_fs$qa_aerosol <- bitwAnd(bitwShiftR(raw_fs$QAI, 6), 3)
-raw_fs$qa_subzero <- bitwAnd(bitwShiftR(raw_fs$QAI, 8), 1)
-raw_fs$qa_saturation <- bitwAnd(bitwShiftR(raw_fs$QAI, 9), 1)
-raw_fs$qa_zenith <- bitwAnd(bitwShiftR(raw_fs$QAI, 10), 1)
-raw_fs$qa_illumination <- bitwAnd(bitwShiftR(raw_fs$QAI, 11), 3)
-raw_fs$qa_slope <- bitwAnd(bitwShiftR(raw_fs$QAI, 13), 1)
-raw_fs$qa_vapor <- bitwAnd(bitwShiftR(raw_fs$QAI, 14), 1)
+raw_fs_KK <- raw_fs
+
+raw_fs_KK$qa_cloud <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 1), 3)
+raw_fs_KK$qa_shadow <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 3), 1)
+raw_fs_KK$qa_snow <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 4), 1)
+raw_fs_KK$qa_water <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 5), 1)
+raw_fs_KK$qa_aerosol <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 6), 3)
+raw_fs_KK$qa_subzero <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 8), 1)
+raw_fs_KK$qa_saturation <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 9), 1)
+raw_fs_KK$qa_zenith <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 10), 1)
+raw_fs_KK$qa_illumination <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 11), 3)
+raw_fs_KK$qa_slope <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 13), 1)
+raw_fs_KK$qa_vapor <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 14), 1)
 
 
-raw_fs$quality <- 0
-raw_fs$quality[raw_fs$qa_cloud != 0 |raw_fs$qa_snow != 0 |raw_fs$qa_shadow != 0] <- 1
-raw_fs <- raw_fs[raw_fs$quality == 0, ]
+raw_fs_KK$quality <- 0
+raw_fs_KK$quality[raw_fs_KK$qa_cloud != 0 |raw_fs_KK$qa_snow != 0 |raw_fs_KK$qa_shadow != 0] <- 1
+raw_fs_KK <- raw_fs_KK[raw_fs_KK$quality == 0, ]
 
-# reduce file size for testing
-fs_LND <- fs_LND_filtered %>% #sample_n(10000) %>% 
+print(paste("number of observations following SHS method for QAI filtering:", nrow(fs_LND_filtered)) )
+print(paste("number of observations following KK method QAI filtering:", nrow(raw_fs_KK)) )
+print(paste("The difference in included observation:", (nrow(fs_LND_filtered)/nrow(raw_fs_KK)), "% (n=",  (nrow(fs_LND_filtered)-nrow(raw_fs_KK)),  ")") )
+  
+
+
+```
+
+
+Additional data filtering and auxilirary varaible and indicity computation
+```{r}
+
+fs_LND <- fs_LND_filtered %>% 
+  # reduce file size for testing
+  #sample_n(10000) %>% 
   # filter out extreme values
   filter(across(BLUE:SWIR2, ~ . > 0),
          across(BLUE:SWIR2, ~ . < 10000)) %>% 
@@ -81,9 +117,14 @@ fs_LND <- fs_LND_filtered %>% #sample_n(10000) %>%
          NDVI   = ((NIR-RED)/(NIR+RED)),
          NDTI   = ((RED-SWIR2)/(RED+SWIR2))) # source: https://www.mdpi.com/2072-4292/10/10/1657/htm
   
+```
+
+
 
 
 # spectra vis ----
+
+```{r}
 
 # NDVI time series
 
@@ -97,24 +138,35 @@ ggplot(fs_LND, aes(doy, NDTI, color=year, group=year)) +
   geom_smooth() +
   scale_colour_viridis_c(option = "D") +
   theme_minimal()
+```
+
 
 ## data wrangel into long ----
-
+```{r}
 fs_LND_long <- fs_LND %>% 
   pivot_longer(cols=c("BLUE":"SWIR2"),names_to = "wavelength", values_to = "reflectance") %>% 
   as.data.frame() #%>% 
   #filter(reflectance >0, 
   #      reflectance <10000)
+```
+
+
 
 
 ## boxplot ----
+
+```{r}
 ggplot(fs_LND_long, aes(wavelength, reflectance, color=sensor)) +
  # geom_jitter() +
   geom_boxplot() +
   scale_colour_viridis_d(option = "D") +
   theme_minimal()
+```
 
 ## density ----
+
+```{r}
+
 
 # full feasable range
 ggplot(fs_LND_long, aes(reflectance, color=sensor, fill=sensor)) +
@@ -157,9 +209,12 @@ ggplot(fs_LND_long, aes(reflectance, color=wavelength, color=wavelength)) +
   facet_wrap(~sensor)
 
 
+```
+
 
 ## ridges ----
 
+```{r}
 ggplot(fs_LND_long, aes(x = reflectance, y = sensor, fill = stat(x))) +
   geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
   scale_fill_viridis_c(name = "reflectance", option = "D") +
@@ -174,10 +229,14 @@ ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
   theme_minimal() +
   facet_wrap(~sensor)
   
+```
+
+
 # feature space vis ----
 
 # import reference data ----
 
+```{r}
 reference_spectra <- read.csv("data/feature_space/sli_gen_dark_soils_0p4.csv",
                               encoding = "UTF-8") %>% 
   mutate(SWIR_ratio = SWIR2/SWIR1,
@@ -187,7 +246,11 @@ ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
   geom_point() +
   scale_colour_viridis_d(option = "D") +
   theme_minimal() 
+```
 
+# plot complete data 
+
+```{r}
 # No dissagregation
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   geom_bin2d(bins = 200) +
@@ -217,7 +280,11 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
   facet_wrap(~month)
+```
 
+
+
+```{r, eval=FALSE}
 
 # old computationally exorbinant method of and plotting density plots 
 
@@ -246,3 +313,5 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
 #   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
 #   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
 #   facet_wrap(~sensor)
+
+```
