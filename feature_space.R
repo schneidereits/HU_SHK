@@ -26,6 +26,7 @@ rev(as.numeric(intToBits(10240)[1:16]))
 mask_medconf <- function(x){
   bs <- intToBits(x)
   if ( ((bs[1]) | # cloud
+        (bs[3]) | # shadow
         (bs[4]) | # snow
         (bs[5]) | # water
         (bs[6]) | # aerosol (only low quality)
@@ -48,7 +49,7 @@ fs_LND_filtered <- raw_fs %>%
   filter(QAI == "valid")
 
 # reduce file size for testing
-fs_LND <- fs_LND_filtered %>% sample_n(100000) %>% 
+fs_LND <- fs_LND_filtered %>% #sample_n(10000) %>% 
   # filter out extreme values
   filter(across(BLUE:SWIR2, ~ . > 0),
          across(BLUE:SWIR2, ~ . < 10000)) %>% 
@@ -83,14 +84,16 @@ ggplot(fs_LND, aes(doy, NDTI, color=year, group=year)) +
 
 fs_LND_long <- fs_LND %>% 
   pivot_longer(cols=c("BLUE":"SWIR2"),names_to = "wavelength", values_to = "reflectance") %>% 
-  as.data.frame() %>% 
-  filter(reflectance >0, 
-         reflectance <10000)
+  as.data.frame() #%>% 
+  #filter(reflectance >0, 
+  #      reflectance <10000)
 
 
 ## boxplot ----
 ggplot(fs_LND_long, aes(wavelength, reflectance, color=sensor)) +
+ # geom_jitter() +
   geom_boxplot() +
+  scale_colour_viridis_d(option = "D") +
   theme_minimal()
 
 ## density ----
@@ -101,7 +104,7 @@ ggplot(fs_LND_long, aes(reflectance, color=sensor, fill=sensor)) +
   #geom_jitter() +
   scale_colour_viridis_d(option = "D") +
   scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, 15000)) +
+  scale_x_continuous(expand = c(0, 0)) +
   #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
   theme_minimal() +
   guides(col = guide_legend(nrow = 3))+
@@ -128,7 +131,7 @@ ggplot(fs_LND_long, aes(reflectance, color=wavelength, color=wavelength)) +
   #geom_jitter() +
   scale_colour_viridis_d(option = "D") +
   scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, 7500)) +
+  scale_x_continuous(expand = c(0, 0)) +
   #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
   theme_minimal() +
   guides(col = guide_legend(nrow = 3))+
@@ -155,65 +158,10 @@ ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
   
 # feature space vis ----
 
-# Get density of points in 2 dimensions.
-# @param x A numeric vector.
-# @param y A numeric vector.
-# @param n Create a square n by n grid to compute density.
-# @return The density within each square.
-get_density <- function(x, y, ...) {
-  dens <- MASS::kde2d(x, y, ...)
-  ix <- findInterval(x, dens$x)
-  iy <- findInterval(y, dens$y)
-  ii <- cbind(ix, iy)
-  return(dens$z[ii])
-}
-
-foo <- as.data.frame(fs_LND) %>%
-  filter(SWIR_ratio != "Inf") %>% 
-  mutate(density = get_density((.)$NDVI, (.)$SWIR_ratio, n = 1000)) 
-  
-
-
-
-ggplot(NULL) +
-  geom_point(data=foo, aes(NDVI, SWIR_ratio, color = density)) +
-  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
-  scale_colour_viridis_c(option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
-theme_minimal()
-
-
-
-foo %>% 
-  filter(NDVI > -1,
-         NDVI <  1,
-         SWIR_ratio >0,
-         SWIR_ratio < 1.2) %>% 
-  
-  ggplot(aes(NDVI, SWIR_ratio, color = density)) +
-  geom_point() +
-  scale_colour_viridis_c(option = "D") +
-  theme_minimal() +
-  facet_wrap(~sensor)
-
-foo %>% 
-  filter(NDVI > -1,
-         NDVI <  1,
-         SWIR_ratio >0,
-         SWIR_ratio < 1.2) %>% 
-  
-  ggplot(aes(NDVI, SWIR_ratio, color = density)) +
-  geom_point() +
-  scale_colour_viridis_c(option = "D") +
-  theme_minimal() +
-  facet_wrap(~month)
-
-
 # import reference data ----
 
 reference_spectra <- read.csv("data/feature_space/sli_gen_dark_soils_0p4.csv",
-                                   encoding = "UTF-8") %>% 
+                              encoding = "UTF-8") %>% 
   mutate(SWIR_ratio = SWIR2/SWIR1,
          NDVI   = ((NIR-RED)/(NIR+RED)))
 
@@ -221,3 +169,62 @@ ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
   geom_point() +
   scale_colour_viridis_d(option = "D") +
   theme_minimal() 
+
+# No dissagregation
+ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
+  geom_bin2d(bins = 200) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
+
+
+# facet by sensor
+ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
+  geom_bin2d(bins = 200) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~sensor)
+
+# facet by month
+ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
+  geom_bin2d(bins = 100) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~month)
+
+
+# old computationally exorbinant method of and plotting density plots 
+
+# # Get density of points in 2 dimensions.
+# # @param x A numeric vector.
+# # @param y A numeric vector.
+# # @param n Create a square n by n grid to compute density.
+# # @return The density within each square.
+# get_density <- function(x, y, ...) {
+#   dens <- MASS::kde2d(x, y, ...)
+#   ix <- findInterval(x, dens$x)
+#   iy <- findInterval(y, dens$y)
+#   ii <- cbind(ix, iy)
+#   return(dens$z[ii])
+# }
+# 
+# fs_density <- as.data.frame(fs_LND) %>%
+#   filter(SWIR_ratio != "Inf") %>% 
+#   mutate(density = get_density((.)$NDVI, (.)$SWIR_ratio, n = 500)) 
+
+# ggplot(fs_density, aes(NDVI, SWIR_ratio, color = density)) +
+#   geom_point() +
+#   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+#   scale_colour_viridis_c(option = "D") +
+#   theme_minimal() +
+#   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+#   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+#   facet_wrap(~sensor)
