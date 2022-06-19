@@ -279,7 +279,7 @@ ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
 ```{r, cache=TRUE}
 # No dissagregation
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
-  geom_bin2d(bins = 100) +
+  geom_bin2d(bins = 300) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
@@ -368,83 +368,6 @@ ggplot(., aes(year, n_observation, color=sensor)) +
 
 ```
 
-## compairison of LND 7 and 8
-
-```{r, cache=TRUE, warning=FALSE}
-
-fs_LND_7_8 <- fs_LND_long %>% 
-  filter(sensor %in% c("LND07", "LND08"),
-         year == 2020, 
-         doy %in% c(93:120),
-         POINT_ID %in% c(40763060:40643065)) 
-
-
-fs_LND_7_8 <- fs_LND_long %>% 
-  filter(sensor %in% c("LND07", "LND08"),
-         year == 2020, 
-         doy %in% c(96:319),
-         POINT_ID %in% c(40763060:40764065)) 
-
-
-# facet wrap by wavelength
-ggplot(fs_LND_7_8, aes(reflectance, color=wavelength, fill=wavelength)) +
-  geom_density(alpha = 0.05) +
-  #geom_jitter() +
-  scale_colour_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
-  theme_minimal() +
-  guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom")  +
-   facet_grid(rows = vars(POINT_ID), cols = vars(sensor))
-
-
-# facet wrap by wavelength
-ggplot(fs_LND_7_8, aes(reflectance, color=wavelength, fill=wavelength)) +
-  geom_density(alpha = 0.05) +
-  #geom_jitter() +
-  scale_colour_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
-  theme_minimal() +
-  guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom")  +
-   facet_grid(rows = vars(doy), cols = vars(sensor)) 
-```
-
-## *Exact* matches of location and time of observation
-```{r, cache=TRUE, cache=TRUE, warning=FALSE}
-
-
-fs_LND_exact <- fs_LND_long %>% 
-  mutate(obs_time_place = paste0(doy,"_", year,"_",POINT_ID)) %>% 
-  group_by(obs_time_place) %>% 
-  filter(n() > 6)
-
-unique(fs_LND_exact$sensor)
-
-
-# facet wrap by wavelength
-ggplot(fs_LND_exact[c(8000:15000),], aes(reflectance, color=wavelength, fill=wavelength)) +
-  geom_density(alpha = 0.05) +
-  #geom_jitter() +
-  scale_colour_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
-  theme_minimal() +
-  guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom")  +
-   facet_grid(rows = vars(doy), cols = vars(sensor)) 
-
-```
-
-Only observation for landsat 7 and 9 exactly match. Visually the correspondence between the spectra is pretty decent though.
-
-
-
 ##  *Exact* matches of location and *loose* match time of observation
 ```{r, cache=TRUE, cache=TRUE}
 fs_LND_loose <- fs_LND_long %>% 
@@ -507,4 +430,72 @@ ggplot(fs_LND_sensor_summary, aes(x = SD, y = sensor, fill = stat(x))) +
   theme_minimal()
 
 ```
+
+### Not fully developed, But here are some additional plots with exact location matches/
+
+## compairison of LND 7 and 8
+
+doy agnostic plots for single locations
+
+```{r, cache=TRUE, warning=FALSE}
+
+fs_LND_7_8 <- fs_LND_long %>% 
+  filter(sensor %in% c("LND07", "LND08"),
+         year == 2020, 
+         doy %in% c(93:120),
+         POINT_ID %in% c(40763060:40643065)) 
+
+
+fs_LND_7_8 <- fs_LND_long %>% 
+  filter(sensor %in% c("LND07", "LND08"),
+         year == 2020, 
+         doy %in% c(96:319),
+         POINT_ID %in% c(40763060:40764068)) 
+
+
+# facet wrap by wavelength
+ggplot(fs_LND_7_8, aes(reflectance, color=wavelength, fill=wavelength)) +
+  geom_density(alpha = 0.05) +
+  #geom_jitter() +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  theme_minimal() +
+  guides(col = guide_legend(nrow = 3))+
+  theme(legend.position = "bottom")  +
+   facet_grid(rows = vars(POINT_ID), cols = vars(sensor))
+
+
+```
+
+## *Exact* matches of location and time of observation
+```{r, cache=TRUE, cache=TRUE, warning=FALSE}
+
+
+fs_LND_exact <- fs_LND_long %>% 
+  mutate(obs_time_place = paste0(doy,"_", year,"_",POINT_ID)) %>% 
+  group_by(obs_time_place) %>% 
+  filter(n() > 6)
+
+unique(fs_LND_exact$sensor)
+
+
+# facet wrap by wavelength
+ggplot(fs_LND_exact[c(8000:15000),], aes(reflectance, color=wavelength, fill=wavelength)) +
+  geom_density(alpha = 0.05) +
+  #geom_jitter() +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  theme_minimal() +
+  guides(col = guide_legend(nrow = 3))+
+  theme(legend.position = "bottom")  +
+   facet_grid(rows = vars(doy), cols = vars(sensor)) 
+
+```
+
+Only observation for landsat 7 and 9 exactly match. Visually the correspondence between the spectra is pretty decent though.
+
 
