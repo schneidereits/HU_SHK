@@ -2,9 +2,21 @@
 title: "feature_space"
 author: "Shawn Schneidereit"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+   fig_width: 10
+   fig_height: 6
+   toc: TRUE
+   toc_float: TRUE
+   toc_collapsed: FALSE
+   code_folding: hide
+   theme: united
+   highlight: tango
+
+
 ---
-```{r setup, include=FALSE}
+
+```{r, cache=TRUE, setup, include=FALSE}
 # library
 library(terra)
 #library(sf)
@@ -16,17 +28,20 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r, include=FALSE}
-# data import and wrangel ----
+# Data import 
+
+```{r, cache=TRUE, include=FALSE}
+# data import and wrangel 
 
 raw_fs <- read.csv("data/feature_space/20220602_FS_LS4_LS5_LS7_LS8_LS9_1985_2022.csv")
 
 ```
 
-## QA band filtering ----
+## QA band filtering
 
 ### Read QA band
-```{r, include=FALSE}
+
+```{r, cache=TRUE, include=FALSE}
 ### What are the three most frequent values in the qa band?
 raw_fs %>% group_by(QAI) %>% tally() %>% arrange(-n)
 
@@ -36,8 +51,9 @@ rev(as.numeric(intToBits(0)[1:16]))
 rev(as.numeric(intToBits(10240)[1:16]))  
 ```
 
-# filtering function
-```{r}
+### filtering function
+
+```{r, cache=TRUE}
 # high confidence clouds or high confidence cloud shadows or fill values
 mask_medconf <- function(x){
   bs <- intToBits(x)
@@ -67,8 +83,9 @@ fs_LND_filtered <- raw_fs %>%
   filter(QAI == "valid")
 ```
 
+### Katjas method compairson
 
-```{r, eval=FALSE}
+```{r, cache=TRUE, eval=TRUE}
 # Katja´s method to filter QAI values
 raw_fs_KK <- raw_fs
 
@@ -88,18 +105,23 @@ raw_fs_KK$qa_vapor <- bitwAnd(bitwShiftR(raw_fs_KK$QAI, 14), 1)
 raw_fs_KK$quality <- 0
 raw_fs_KK$quality[raw_fs_KK$qa_cloud != 0 |raw_fs_KK$qa_snow != 0 |raw_fs_KK$qa_shadow != 0] <- 1
 raw_fs_KK <- raw_fs_KK[raw_fs_KK$quality == 0, ]
+```
 
-print(paste("number of observations following SHS method for QAI filtering:", nrow(fs_LND_filtered)) )
-print(paste("number of observations following KK method QAI filtering:", nrow(raw_fs_KK)) )
+
+```{r, cache=TRUE, eval=TRUE}
+print(paste("number of observations following SHS method for QAI filtering:", (nrow(fs_LND_filtered)/6)) )
+print(paste("number of observations following KK method QAI filtering:", (nrow(raw_fs_KK)/6)) )
 print(paste("The difference in included observation:", (nrow(fs_LND_filtered)/nrow(raw_fs_KK)), "% (n=",  (nrow(fs_LND_filtered)-nrow(raw_fs_KK)),  ")") )
   
 
 
 ```
 
+As seen above the differences in the filtering methods and parameterization is very marginal, at ~1% difference in amount of included observations
 
-Additional data filtering and auxilirary varaible and indicity computation
-```{r}
+##Additional data filtering and auxilirary varaible and indicity computation
+
+```{r, cache=TRUE}
 
 fs_LND <- fs_LND_filtered %>% 
   # reduce file size for testing
@@ -119,43 +141,60 @@ fs_LND <- fs_LND_filtered %>%
   
 ```
 
+# spectra vis
 
-
-
-# spectra vis ----
-
-```{r}
-
-# NDVI time series
-
+## NDVI time series
+```{r, cache=TRUE}
 ggplot(fs_LND, aes(doy, NDVI, color=year, group=year)) +
   geom_smooth() +
   scale_colour_viridis_c(option = "D") +
   theme_minimal()
+```
 
-# NDTI time series
+Here it can be seen that over time, average NDVI maximum values tend to increase over time, particularly early in the year before the growing season. Over such a long time frame it is possible though that this chance could be attributed to more irrigation, climate change, or lULC rather been strictly being resultant of deviations in sensor spec?
+
+## NDTI time series
+```{r, cache=TRUE}
+
 ggplot(fs_LND, aes(doy, NDTI, color=year, group=year)) +
   geom_smooth() +
   scale_colour_viridis_c(option = "D") +
   theme_minimal()
 ```
 
+Simular story here, with NDTI decreasing over time
 
-## data wrangel into long ----
-```{r}
+## data wrangel into long
+
+```{r, cache=TRUE}
 fs_LND_long <- fs_LND %>% 
   pivot_longer(cols=c("BLUE":"SWIR2"),names_to = "wavelength", values_to = "reflectance") %>% 
-  as.data.frame() #%>% 
-  #filter(reflectance >0, 
-  #      reflectance <10000)
+  as.data.frame()  %>% 
+    mutate(wavelength_num = case_when(wavelength == "BLUE" ~ 482,
+                                      wavelength == "GREEN" ~ 562,
+                                      wavelength == "RED" ~ 655,
+                                      wavelength == "NIR" ~ 865,
+                                      wavelength == "SWIR1" ~ 1610,
+                                      wavelength == "SWIR2" ~ 2200))
 ```
 
 
+## simple mean reflectance over time
+```{r, cache=TRUE}
+ggplot(fs_LND_long, aes(wavelength_num, reflectance, color=year, group=year)) +
+   # geom_smooth(formula = y ~ s(x, bs = "cs", k=6)) +
+   stat_summary(fun=mean, geom="line", size = 1) + # draw a mean line in the data
+  scale_colour_viridis_c(option = "D") +
+  theme_minimal()
+
+```
+
+When plotting a simple mean of spectra across years it can be seen that more recent years dont defaco have higher reflectance values across the entire electromagnetic spectrum
 
 
-## boxplot ----
+## boxplot
 
-```{r}
+```{r, cache=TRUE}
 ggplot(fs_LND_long, aes(wavelength, reflectance, color=sensor)) +
  # geom_jitter() +
   geom_boxplot() +
@@ -163,12 +202,14 @@ ggplot(fs_LND_long, aes(wavelength, reflectance, color=sensor)) +
   theme_minimal()
 ```
 
-## density ----
+Looks like lots of extreme values (even post QAI filter), *but* when looking at the next density plot section, you can that relatively speaking, these extreme outlying values are exceedinly rare and marginal.
 
-```{r}
+## density
+
+```{r, cache=TRUE}
 
 
-# full feasable range
+# facet wrap by wavelength
 ggplot(fs_LND_long, aes(reflectance, color=sensor, fill=sensor)) +
   geom_density(alpha = 0.05) +
   #geom_jitter() +
@@ -181,21 +222,8 @@ ggplot(fs_LND_long, aes(reflectance, color=sensor, fill=sensor)) +
   theme(legend.position = "bottom")  +
   facet_wrap(~wavelength)
 
-# reduced range
-ggplot(fs_LND_long, aes(reflectance, color=sensor, fill=sensor)) +
-  geom_density(alpha = 0.05) +
-  #geom_jitter() +
-  scale_colour_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, 7500)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
-  theme_minimal() +
-  guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom")  +
-  facet_wrap(~wavelength)
 
-
-# reduced range
+# facet wrap by sensor
 ggplot(fs_LND_long, aes(reflectance, color=wavelength, color=wavelength)) +
   geom_density(alpha = 0.05) +
   #geom_jitter() +
@@ -211,12 +239,11 @@ ggplot(fs_LND_long, aes(reflectance, color=wavelength, color=wavelength)) +
 
 ```
 
+## ridges
 
-## ridges ----
-
-```{r}
+```{r, cache=TRUE}
 ggplot(fs_LND_long, aes(x = reflectance, y = sensor, fill = stat(x))) +
-  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+  geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
   scale_fill_viridis_c(name = "reflectance", option = "D") +
   scale_x_continuous(expand = c(0, 0), limits = c(0, 15000)) +
   theme_minimal() +
@@ -231,12 +258,11 @@ ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
   
 ```
 
+# feature space vis
 
-# feature space vis ----
+## import reference data
 
-# import reference data ----
-
-```{r}
+```{r, cache=TRUE}
 reference_spectra <- read.csv("data/feature_space/sli_gen_dark_soils_0p4.csv",
                               encoding = "UTF-8") %>% 
   mutate(SWIR_ratio = SWIR2/SWIR1,
@@ -248,20 +274,23 @@ ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
   theme_minimal() 
 ```
 
-# plot complete data 
+## plot complete data
 
-```{r}
+```{r, cache=TRUE}
 # No dissagregation
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
-  geom_bin2d(bins = 200) +
+  geom_bin2d(bins = 100) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2))
+```
 
+Here we can see that there are two dense zones in the spectral feature spaces. The smaller and fainter zone is predominately populated by landsat 7 pixels (clearly seen in the following plot)
 
-# facet by sensor
+## facet by sensor
+```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   geom_bin2d(bins = 200) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
@@ -270,8 +299,13 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
   facet_wrap(~sensor)
+```
 
-# facet by month
+Here we can see that the spectral library fits particularly well to Landsat 8 (probably do to the fact that is was created using lansat 8 pixels?). 
+
+## facet by month
+```{r, cache=TRUE}
+
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   geom_bin2d(bins = 100) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
@@ -282,9 +316,9 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   facet_wrap(~month)
 ```
 
+Here we can also see that across all sensors, the spectral library seems to triangulate the data points better during growing season months. 
 
-
-```{r, eval=FALSE}
+```{r, cache=TRUE, include==FALSE}
 
 # old computationally exorbinant method of and plotting density plots 
 
@@ -315,3 +349,162 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
 #   facet_wrap(~sensor)
 
 ```
+
+# single location band compairison
+
+## Overview of observations over time by sensor
+
+```{r, cache=TRUE}
+
+ fs_LND %>% 
+  group_by(year, sensor) %>% 
+  summarise(n_observation = n()) %>% 
+
+ggplot(., aes(year, n_observation, color=sensor)) +
+  geom_line() +
+  scale_fill_continuous(type = "viridis") +
+  scale_colour_viridis_d(option = "D") +
+  theme_minimal() 
+
+```
+
+## compairison of LND 7 and 8
+
+```{r, cache=TRUE, warning=FALSE}
+
+fs_LND_7_8 <- fs_LND_long %>% 
+  filter(sensor %in% c("LND07", "LND08"),
+         year == 2020, 
+         doy %in% c(93:120),
+         POINT_ID %in% c(40763060:40643065)) 
+
+
+fs_LND_7_8 <- fs_LND_long %>% 
+  filter(sensor %in% c("LND07", "LND08"),
+         year == 2020, 
+         doy %in% c(96:319),
+         POINT_ID %in% c(40763060:40764065)) 
+
+
+# facet wrap by wavelength
+ggplot(fs_LND_7_8, aes(reflectance, color=wavelength, fill=wavelength)) +
+  geom_density(alpha = 0.05) +
+  #geom_jitter() +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  theme_minimal() +
+  guides(col = guide_legend(nrow = 3))+
+  theme(legend.position = "bottom")  +
+   facet_grid(rows = vars(POINT_ID), cols = vars(sensor))
+
+
+# facet wrap by wavelength
+ggplot(fs_LND_7_8, aes(reflectance, color=wavelength, fill=wavelength)) +
+  geom_density(alpha = 0.05) +
+  #geom_jitter() +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  theme_minimal() +
+  guides(col = guide_legend(nrow = 3))+
+  theme(legend.position = "bottom")  +
+   facet_grid(rows = vars(doy), cols = vars(sensor)) 
+```
+
+## *Exact* matches of location and time of observation
+```{r, cache=TRUE, cache=TRUE, warning=FALSE}
+
+
+fs_LND_exact <- fs_LND_long %>% 
+  mutate(obs_time_place = paste0(doy,"_", year,"_",POINT_ID)) %>% 
+  group_by(obs_time_place) %>% 
+  filter(n() > 6)
+
+unique(fs_LND_exact$sensor)
+
+
+# facet wrap by wavelength
+ggplot(fs_LND_exact[c(8000:15000),], aes(reflectance, color=wavelength, fill=wavelength)) +
+  geom_density(alpha = 0.05) +
+  #geom_jitter() +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  theme_minimal() +
+  guides(col = guide_legend(nrow = 3))+
+  theme(legend.position = "bottom")  +
+   facet_grid(rows = vars(doy), cols = vars(sensor)) 
+
+```
+
+Only observation for landsat 7 and 9 exactly match. Visually the correspondence between the spectra is pretty decent though.
+
+
+
+##  *Exact* matches of location and *loose* match time of observation
+```{r, cache=TRUE, cache=TRUE}
+fs_LND_loose <- fs_LND_long %>% 
+  filter(sensor %in% c("LND07", "LND08")) %>% 
+  
+
+  mutate(obs_time_place = paste0(plyr::round_any(doy, 2, f = floor),"_", year,"_",POINT_ID)) %>% 
+  group_by(obs_time_place) %>% 
+  filter(n() > 6)
+
+
+```
+
+Total number of observations that match the loose condition of being within ten days of each other: `r (nrow(fs_LND_loose)/6) `
+
+Days of year with available observations: `r sort(unique(fs_LND_loose$doy)) `
+
+
+
+```{r, cache=TRUE}
+for (i in 1:10) {
+  
+  scens <- unique(fs_LND_loose$obs_time_place)[c((((i-1)*20)+1):((i)*20))]
+  
+  fs_LND_loose_subset <- fs_LND_loose %>% 
+    filter(obs_time_place %in% scens) 
+  
+  print(ggplot( fs_LND_loose_subset, aes(wavelength_num, reflectance, color=sensor, fill=sensor)) +
+    # geom_density(alpha = 0.05) +
+    geom_line() +
+   # scale_colour_viridis_d(option = "D") +
+    #scale_fill_viridis_d(option = "D") +
+    scale_x_continuous(expand = c(0, 0)) +
+    #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+    theme_minimal() +
+    guides(col = guide_legend(nrow = 3))+
+     theme(legend.position = "bottom", 
+           axis.text.y = element_text(angle = 45),
+           strip.text.y = element_text(size = 8, angle = 330))  +
+    facet_wrap( ~obs_time_place) )
+  }
+
+```
+
+
+Summary statistics for sensor variance between all sensors
+```{r, cache=TRUE}
+
+fs_LND_sensor_summary <- fs_LND_long %>% 
+  mutate(obs_time_place = paste0( round(doy, digits = -1),"_", year,"_",POINT_ID)) %>% 
+  group_by(obs_time_place) %>% 
+  filter(n() > 6) %>% 
+  group_by(obs_time_place, sensor) %>% 
+  summarise(SD = sd(reflectance))
+
+ggplot(fs_LND_sensor_summary, aes(x = SD, y = sensor, fill = stat(x))) +
+  geom_density_ridges_gradient(scale = 1, rel_min_height = 0.01) +
+  scale_fill_viridis_c(name = "SD", option = "D") +
+ # scale_x_continuous(expand = c(0, 0), limits = c(0, 15000)) +
+  theme_minimal()
+
+```
+
