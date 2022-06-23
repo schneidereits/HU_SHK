@@ -109,9 +109,9 @@ raw_fs_KK <- raw_fs_KK[raw_fs_KK$quality == 0, ]
 
 
 ```{r, cache=TRUE, eval=TRUE}
-print(paste("number of observations following SHS method for QAI filtering:", (nrow(fs_LND_filtered)/6)) )
-print(paste("number of observations following KK method QAI filtering:", (nrow(raw_fs_KK)/6)) )
-print(paste("The difference in included observation:", (nrow(fs_LND_filtered)/nrow(raw_fs_KK)), "% (n=",  (nrow(fs_LND_filtered)-nrow(raw_fs_KK)),  ")") )
+print(paste("number of observations following SHS method for QAI filtering:", round(nrow(fs_LND_filtered)/6)) )
+print(paste("number of observations following KK method QAI filtering:", round(nrow(raw_fs_KK)/6)) )
+print(paste("The difference in included observation:", round(nrow(fs_LND_filtered)/nrow(raw_fs_KK), digits = 2), "% (n=",  (nrow(fs_LND_filtered)-nrow(raw_fs_KK)),  ")") )
   
 
 
@@ -137,9 +137,10 @@ fs_LND <- fs_LND_filtered %>%
          sensor = str_sub(scene, -5, -1),
          SWIR_ratio = SWIR2/SWIR1,
          NDVI   = ((NIR-RED)/(NIR+RED)),
-         NDTI   = ((RED-SWIR2)/(RED+SWIR2))) # source: https://www.mdpi.com/2072-4292/10/10/1657/htm
+         NDTI   = ((SWIR1-SWIR2)/(SWIR1+SWIR2))) # source: https://www.mdpi.com/2072-4292/10/10/1657/htm
   
 ```
+
 
 # spectra vis
 
@@ -151,18 +152,18 @@ ggplot(fs_LND, aes(doy, NDVI, color=year, group=year)) +
   theme_minimal()
 ```
 
-Here it can be seen that over time, average NDVI maximum values tend to increase over time, particularly early in the year before the growing season. Over such a long time frame it is possible though that this chance could be attributed to more irrigation, climate change, or lULC rather been strictly being resultant of deviations in sensor spec?
+Here it can be seen that over time, average NDVI maximum values tend to increase over time, particularly early in the year before the growing season. Over such a long time frame it is possible though that this chance could be attributed to more irrigation, climate change, or LULC rather been strictly being resultant of deviations in sensor spec?
 
 ## NDTI time series
 ```{r, cache=TRUE}
 
-ggplot(fs_LND, aes(doy, NDTI, color=year, group=year)) +
+ggplot(na.omit(fs_LND), aes(doy, NDTI, color=year, group=year)) +
   geom_smooth() +
   scale_colour_viridis_c(option = "D") +
   theme_minimal()
 ```
 
-Simular story here, with NDTI decreasing over time
+Similar story here, with NDTI decreasing over time
 
 ## data wrangel into long
 
@@ -258,6 +259,7 @@ ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
   
 ```
 
+
 # feature space vis
 
 ## import reference data
@@ -305,7 +307,6 @@ Here we can see that the spectral library fits particularly well to Landsat 8 (p
 
 ## facet by month
 ```{r, cache=TRUE}
-
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   geom_bin2d(bins = 100) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
@@ -317,6 +318,36 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
 ```
 
 Here we can also see that across all sensors, the spectral library seems to triangulate the data points better during growing season months. 
+
+## facet by year
+
+_Displayed with only point per reference class to improve interpretability_ 
+
+```{r, cache=TRUE}
+ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
+  geom_bin2d(bins = 100) +
+  geom_point(data=reference_spectra[c(1,3,25),], aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+## NDTI feature space
+
+```{r, cache=TRUE}
+ggplot(fs_LND, aes(NDTI, SWIR_ratio)) +
+  geom_point() +
+ # geom_bin2d(bins = 10) +
+  #geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal()# +
+#  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+#  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
+```
+
+NDTI is the inverse of the SWIR ratio. Therefor the conventional feature space comparison inst really appropriate. 
 
 ```{r, cache=TRUE, include==FALSE}
 
@@ -354,17 +385,54 @@ Here we can also see that across all sensors, the spectral library seems to tria
 
 ## Overview of observations over time by sensor
 
+
+## Temporal overvire and year resolution
 ```{r, cache=TRUE}
 
- fs_LND %>% 
-  group_by(year, sensor) %>% 
-  summarise(n_observation = n()) %>% 
-
+fs_LND |>  
+  group_by( year, sensor) %>% 
+  summarise(n_observation = n()) %>%  
+  
 ggplot(., aes(year, n_observation, color=sensor)) +
   geom_line() +
   scale_fill_continuous(type = "viridis") +
   scale_colour_viridis_d(option = "D") +
   theme_minimal() 
+```
+
+
+## Temporal overview at month resolution
+```{r, cache=TRUE}
+fs_LND_obs_overview <- fs_LND %>% 
+  group_by(month, year, sensor) %>% 
+  summarise(n_observation = n()) %>%
+  mutate(timestamp = zoo::as.yearmon(paste0(month,"_", year), format="%m_%Y")) 
+
+ggplot(fs_LND_obs_overview, aes(timestamp, n_observation, color=sensor)) +
+  geom_line(size=1) +
+  scale_fill_continuous(type = "viridis") +
+  scale_colour_viridis_d(option = "D") +
+  scale_x_continuous(breaks=seq(1984,2022,2)) +
+  theme_minimal()
+```
+
+## observation density by month
+
+```{r, cache=TRUE}
+
+
+ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=sensor, color=sensor)) +
+ # geom_boxplot(alpha=0.3, notch = T) +
+  geom_violin(alpha=0.3) +
+  geom_jitter(alpha=0.3) +
+ #geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_minimal() +
+  scale_x_continuous(breaks=seq(1,12,1)) +
+  scale_y_continuous(limits = c(0, 2000)) +
+  facet_wrap(~sensor)
+
 
 ```
 
@@ -388,7 +456,7 @@ Days of year with available observations: `r sort(unique(fs_LND_loose$doy)) `
 
 
 ```{r, cache=TRUE}
-for (i in 1:10) {
+for (i in 1:4) {
   
   scens <- unique(fs_LND_loose$obs_time_place)[c((((i-1)*20)+1):((i)*20))]
   
@@ -430,6 +498,38 @@ ggplot(fs_LND_sensor_summary, aes(x = SD, y = sensor, fill = stat(x))) +
   theme_minimal()
 
 ```
+
+
+
+# scatterplots 
+
+```{r, cache=TRUE}
+# 
+# fs_LND_loose %>% 
+#   filter(sensor %in% c("LND07", "LND07")) %>%
+#   mutate(LND05 = case_when(sensor=="LND05" ~ reflectance),
+#          LND07 = case_when(sensor=="LND07" ~ reflectance))
+# 
+# 
+# ggplot(data = fs_LND_loose) +
+# geom_bin2d(aes(fs_LND_loose$reflectance[fs_LND_loose$sensor=="LND07"],
+#                          fs_LND_loose$reflectance[fs_LND_loose$sensor=="LND08"]), bins = 200) +
+#   scale_colour_viridis_d(option = "D") +
+#   theme_minimal() +
+#   facet_wrap(~wavelength)
+# 
+# 
+#  geom_bin2d(bins = 200) +
+#   scale_fill_continuous(type = "viridis") +
+#   theme_minimal() +
+#   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+#   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+#   facet_wrap(~sensor)
+
+```
+
+
+
 
 ### Not fully developed, But here are some additional plots with exact location matches/
 
