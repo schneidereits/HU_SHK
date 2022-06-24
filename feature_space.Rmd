@@ -176,7 +176,8 @@ fs_LND_long <- fs_LND %>%
                                       wavelength == "RED" ~ 655,
                                       wavelength == "NIR" ~ 865,
                                       wavelength == "SWIR1" ~ 1610,
-                                      wavelength == "SWIR2" ~ 2200))
+                                      wavelength == "SWIR2" ~ 2200),
+            reflectance = reflectance/100) # scale to percent
 ```
 
 
@@ -281,7 +282,7 @@ ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
 ```{r, cache=TRUE}
 # No dissagregation
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
-  geom_bin2d(bins = 300) +
+  stat_bin_hex(bins = 300) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
@@ -294,7 +295,7 @@ Here we can see that there are two dense zones in the spectral feature spaces. T
 ## facet by sensor
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
-  geom_bin2d(bins = 200) +
+  stat_bin_hex(bins = 200) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
@@ -308,7 +309,7 @@ Here we can see that the spectral library fits particularly well to Landsat 8 (p
 ## facet by month
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
-  geom_bin2d(bins = 100) +
+  stat_bin_hex(bins = 100) +
   geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
@@ -323,9 +324,12 @@ Here we can also see that across all sensors, the spectral library seems to tria
 
 _Displayed with only point per reference class to improve interpretability_ 
 
-```{r, cache=TRUE}
-ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
-  geom_bin2d(bins = 100) +
+### 1985-2000
+```{r, cache=TRUE, warning=FALSE}
+# FROM 1985-2000
+fs_LND |> filter(year<2001) %>%
+ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 100) +
   geom_point(data=reference_spectra[c(1,3,25),], aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
@@ -334,12 +338,27 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   facet_wrap(~year)
 ```
 
+### 2001-2022
+```{r, cache=TRUE, warning=FALSE}
+# FROM 2001-2022
+fs_LND |> filter(year>2000) %>%
+ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 100) +
+  geom_point(data=reference_spectra[c(1,3,25),], aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+
+```
+
 ## NDTI feature space
 
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDTI, SWIR_ratio)) +
   geom_point() +
- # geom_bin2d(bins = 10) +
+ # stat_bin_hex(bins = 10) +
   #geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal()# +
@@ -348,6 +367,20 @@ ggplot(fs_LND, aes(NDTI, SWIR_ratio)) +
 ```
 
 NDTI is the inverse of the SWIR ratio. Therefor the conventional feature space comparison inst really appropriate. 
+
+```{r, cache=TRUE}
+ggplot(fs_LND, aes(NDTI, RED/GREEN)) +
+  stat_bin_hex(bins = 300) +
+ # stat_bin_hex(bins = 10) +
+  #geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal()# +
+#  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+#  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
+```
+
+Pick some random ratio of other bands (red green in this case), yields a visually similar plot, with limited interpretability. Maybe there is a specific ratio/comparison that is helpful though.
+
 
 ```{r, cache=TRUE, include==FALSE}
 
@@ -416,9 +449,14 @@ ggplot(fs_LND_obs_overview, aes(timestamp, n_observation, color=sensor)) +
   theme_minimal()
 ```
 
+The acute fluctuations in observation numbers seems to stem from the fact that during winter months there is a lower observation density (plotted below)
+
+
 ## observation density by month
 
-```{r, cache=TRUE}
+_(same data with some different vis options)_
+
+```{r, cache=TRUE, warning=FALSE}
 
 
 ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=sensor, color=sensor)) +
@@ -434,14 +472,28 @@ ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=senso
   facet_wrap(~sensor)
 
 
+ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=sensor, color=sensor)) +
+ geom_boxplot(alpha=0.3) +
+ # geom_violin(alpha=0.3) +
+  geom_jitter(alpha=0.3) +
+ #geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_minimal() +
+  scale_x_continuous(breaks=seq(1,12,1)) +
+  scale_y_continuous(limits = c(0, 2000)) +
+  facet_wrap(~sensor)
+
+
 ```
+
+The density of observations in summer months are far greater (although more variable), While during winter months are seem to be constantly few observations. This trend is stable across sensors, so mostly likely can largely attributed to increased cloud/snow cover during winter months. 
+
 
 ##  *Exact* matches of location and *loose* match time of observation
 ```{r, cache=TRUE, cache=TRUE}
 fs_LND_loose <- fs_LND_long %>% 
-  filter(sensor %in% c("LND07", "LND08")) %>% 
-  
-
+  # filter(sensor %in% c("LND07", "LND08")) %>% 
   mutate(obs_time_place = paste0(plyr::round_any(doy, 2, f = floor),"_", year,"_",POINT_ID)) %>% 
   group_by(obs_time_place) %>% 
   filter(n() > 6)
@@ -453,7 +505,7 @@ Total number of observations that match the loose condition of being within ten 
 
 Days of year with available observations: `r sort(unique(fs_LND_loose$doy)) `
 
-
+## Sample compairison of LND07 and LND08 spectra 
 
 ```{r, cache=TRUE}
 for (i in 1:4) {
@@ -461,7 +513,8 @@ for (i in 1:4) {
   scens <- unique(fs_LND_loose$obs_time_place)[c((((i-1)*20)+1):((i)*20))]
   
   fs_LND_loose_subset <- fs_LND_loose %>% 
-    filter(obs_time_place %in% scens) 
+    filter(obs_time_place %in% scens) |> 
+    filter(sensor %in% c("LND07", "LND08")) 
   
   print(ggplot( fs_LND_loose_subset, aes(wavelength_num, reflectance, color=sensor, fill=sensor)) +
     # geom_density(alpha = 0.05) +
@@ -503,99 +556,114 @@ ggplot(fs_LND_sensor_summary, aes(x = SD, y = sensor, fill = stat(x))) +
 
 # scatterplots 
 
+
+
+
 ```{r, cache=TRUE}
-# 
-# fs_LND_loose %>% 
-#   filter(sensor %in% c("LND07", "LND07")) %>%
-#   mutate(LND05 = case_when(sensor=="LND05" ~ reflectance),
-#          LND07 = case_when(sensor=="LND07" ~ reflectance))
-# 
-# 
-# ggplot(data = fs_LND_loose) +
-# geom_bin2d(aes(fs_LND_loose$reflectance[fs_LND_loose$sensor=="LND07"],
-#                          fs_LND_loose$reflectance[fs_LND_loose$sensor=="LND08"]), bins = 200) +
-#   scale_colour_viridis_d(option = "D") +
-#   theme_minimal() +
-#   facet_wrap(~wavelength)
-# 
-# 
-#  geom_bin2d(bins = 200) +
-#   scale_fill_continuous(type = "viridis") +
-#   theme_minimal() +
-#   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
-#   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
-#   facet_wrap(~sensor)
-
+fs_LND_scatter <- fs_LND_loose |> 
+  select(obs_time_place,sensor,wavelength,reflectance) |> 
+  pivot_wider(names_from = sensor, values_from = c(reflectance)) |> 
+  rename(reflectance_LND04 = LND04,
+         reflectance_LND05 = LND05,
+         reflectance_LND07 = LND07,
+         reflectance_LND08  = LND08,
+         reflectance_LND09= LND09)
 ```
 
 
+## Scatterplot of Landsat 7 and 8 specta
 
+```{r, cache=TRUE}
 
-### Not fully developed, But here are some additional plots with exact location matches/
+fs_LND_scatter_LND_7_8 <- fs_LND_scatter |> select(-reflectance_LND04,-reflectance_LND05, -reflectance_LND09) |> 
+  na.omit()
 
-## compairison of LND 7 and 8
-
-doy agnostic plots for single locations
-
-```{r, cache=TRUE, warning=FALSE}
-
-fs_LND_7_8 <- fs_LND_long %>% 
-  filter(sensor %in% c("LND07", "LND08"),
-         year == 2020, 
-         doy %in% c(93:120),
-         POINT_ID %in% c(40763060:40643065)) 
-
-
-fs_LND_7_8 <- fs_LND_long %>% 
-  filter(sensor %in% c("LND07", "LND08"),
-         year == 2020, 
-         doy %in% c(96:319),
-         POINT_ID %in% c(40763060:40764068)) 
-
-
-# facet wrap by wavelength
-ggplot(fs_LND_7_8, aes(reflectance, color=wavelength, fill=wavelength)) +
-  geom_density(alpha = 0.05) +
-  #geom_jitter() +
+ggplot(fs_LND_scatter_LND_7_8,aes(reflectance_LND07, reflectance_LND08)) +
+stat_bin_hex(bins = 100) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
   scale_colour_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  scale_fill_continuous(type = "viridis") +
   theme_minimal() +
-  guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom")  +
-   facet_grid(rows = vars(POINT_ID), cols = vars(sensor))
-
-
+  annotate("text", x=75, y=105,
+           label= paste0("R2 =",round((cor((fs_LND_scatter_LND_7_8$reflectance_LND07), 
+                                           (fs_LND_scatter_LND_7_8$reflectance_LND08),
+                                           use="complete.obs")^2),2)), size=4.5, hjust=0) + 
+  
+  annotate("text", x= 75, y=100, hjust=0, size=4.5,
+           label= paste0("RMSE ==",round(sqrt(mean(((fs_LND_scatter_LND_7_8$reflectance_LND07)-
+                                                    (fs_LND_scatter_LND_7_8$reflectance_LND08))^2,
+                                                   na.rm=TRUE)),2)), parse=TRUE)+
+  
+  annotate("text", x=75, y= 95, size=4.5, hjust=0,
+           label=paste0("Bias = ", round((mean((fs_LND_scatter_LND_7_8$reflectance_LND07), na.rm=TRUE) -
+                                          mean((fs_LND_scatter_LND_7_8$reflectance_LND08),na.rm=TRUE)),2)))+
+  
+  annotate("text", x=75, y=90,size=4.5,hjust=0, 
+           label=paste0("MAE = ", round(mean(abs((fs_LND_scatter_LND_7_8$reflectance_LND07)-                                          
+                                                (fs_LND_scatter_LND_7_8$reflectance_LND08))),2)))
 ```
 
-## *Exact* matches of location and time of observation
-```{r, cache=TRUE, cache=TRUE, warning=FALSE}
+## compairson by wavelength
 
-
-fs_LND_exact <- fs_LND_long %>% 
-  mutate(obs_time_place = paste0(doy,"_", year,"_",POINT_ID)) %>% 
-  group_by(obs_time_place) %>% 
-  filter(n() > 6)
-
-unique(fs_LND_exact$sensor)
-
-
-# facet wrap by wavelength
-ggplot(fs_LND_exact[c(8000:15000),], aes(reflectance, color=wavelength, fill=wavelength)) +
-  geom_density(alpha = 0.05) +
-  #geom_jitter() +
+```{r, cache=TRUE}
+ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND08)) +
+  stat_bin_hex(bins = 100) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
   scale_colour_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
-  scale_x_continuous(expand = c(0, 0)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  scale_fill_continuous(type = "viridis") +
   theme_minimal() +
-  guides(col = guide_legend(nrow = 3))+
-  theme(legend.position = "bottom")  +
-   facet_grid(rows = vars(doy), cols = vars(sensor)) 
+  facet_wrap(~wavelength, 
+             #scales="free"
+  ) 
+```
+
+
+
+# Scatterplot of Landsat 5 and 7 specta
+
+```{r, cache=TRUE}
+
+fs_LND_scatter_LND_5_7 <- fs_LND_scatter |> select(-reflectance_LND04,-reflectance_LND08, -reflectance_LND09) |> 
+  na.omit()
+
+
+ggplot(fs_LND_scatter_LND_5_7, aes(reflectance_LND07, reflectance_LND05)) +
+stat_bin_hex(bins = 100) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() + 
+  annotate("text", x=60, y=105,
+           label= paste0("R2 =",round((cor((fs_LND_scatter_LND_5_7$reflectance_LND07), 
+                                           (fs_LND_scatter_LND_5_7$reflectance_LND05),
+                                           use="complete.obs")^2),2)), size=4.5, hjust=0) + 
+  
+  annotate("text", x= 60, y=100, hjust=0, size=4.5,
+           label= paste0("RMSE ==",round(sqrt(mean(((fs_LND_scatter_LND_5_7$reflectance_LND07)-
+                                                    (fs_LND_scatter_LND_5_7$reflectance_LND05))^2,
+                                                   na.rm=TRUE)),2)), parse=TRUE)+
+  
+  annotate("text", x=60, y= 95, size=4.5, hjust=0,
+           label=paste0("Bias = ", round((mean((fs_LND_scatter_LND_5_7$reflectance_LND07), na.rm=TRUE) -
+                                          mean((fs_LND_scatter_LND_5_7$reflectance_LND05),na.rm=TRUE)),2)))+
+  
+  annotate("text", x=60, y=90,size=4.5,hjust=0, 
+           label=paste0("MAE = ", round(mean(abs((fs_LND_scatter_LND_5_7$reflectance_LND07)-
+                                                (fs_LND_scatter_LND_5_7$reflectance_LND05))),2))) 
 
 ```
 
-Only observation for landsat 7 and 9 exactly match. Visually the correspondence between the spectra is pretty decent though.
+## compairson by wavelength
 
+```{r, cache=TRUE}
+ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND05)) +
+  stat_bin_hex(bins = 100) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  facet_wrap(~wavelength, 
+             #scales="free"
+  ) 
+```
 
