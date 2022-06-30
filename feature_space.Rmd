@@ -276,7 +276,8 @@ ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
 reference_spectra <- read.csv("data/feature_space/sli_gen_dark_soils_0p4.csv",
                               encoding = "UTF-8") %>% 
   mutate(SWIR_ratio = SWIR2/SWIR1,
-         NDVI   = ((NIR-RED)/(NIR+RED)))
+         NDVI   = ((NIR-RED)/(NIR+RED)),
+         NDTI   = ((SWIR1-SWIR2)/(SWIR1+SWIR2)))
 
 ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
   geom_point() +
@@ -363,31 +364,41 @@ ggplot(., aes(NDVI, SWIR_ratio)) +
 ## NDTI feature space
 
 ```{r, cache=TRUE}
-ggplot(fs_LND, aes(NDTI, SWIR_ratio)) +
+ggplot(fs_LND, aes(NDVI, NDTI)) +
   geom_point() +
- # stat_bin_hex(bins = 10) +
-  #geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  stat_bin_hex(bins = 250) +
+  geom_point(data=reference_spectra, aes(NDVI, NDTI), color ="red") +
   scale_fill_continuous(type = "viridis") +
+   scale_x_continuous(expand = c(0, 0), limits = c(-0.1, 1)) +
+   scale_y_continuous(expand = c(0, 0), limits = c(-0.25, 0.8)) +
   theme_minimal()# +
 #  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
 #  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
 ```
 
-NDTI is the inverse of the SWIR ratio. Therefor the conventional feature space comparison inst really appropriate. 
-
+## facet by sensor
 ```{r, cache=TRUE}
-ggplot(fs_LND, aes(NDTI, RED/GREEN)) +
-  stat_bin_hex(bins = 300) +
- # stat_bin_hex(bins = 10) +
-  #geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+ggplot(fs_LND, aes(NDVI, NDTI)) +
+  stat_bin_hex(bins = 200) +
+  geom_point(data=reference_spectra, aes(NDVI, NDTI), color ="red") +
   scale_fill_continuous(type = "viridis") +
-  theme_minimal()# +
-#  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
-#  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(-0.25, 1.2)) +
+  facet_wrap(~sensor)
 ```
 
-Pick some random ratio of other bands (red green in this case), yields a visually similar plot, with limited interpretability. Maybe there is a specific ratio/comparison that is helpful though.
-
+## facet by month
+```{r, cache=TRUE}
+ggplot(fs_LND, aes(NDVI, NDTI)) +
+  stat_bin_hex(bins = 100) +
+  geom_point(data=reference_spectra, aes(NDVI, NDTI), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(-0.25, 1.2)) +
+  facet_wrap(~month)
+```
 
 ```{r, cache=TRUE, include==FALSE}
 
