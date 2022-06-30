@@ -58,13 +58,17 @@ rev(as.numeric(intToBits(10240)[1:16]))
 mask_medconf <- function(x){
   bs <- intToBits(x)
   if ( ((bs[1]) | # cloud
+        (bs[2]) | # low cloud confidence
         (bs[3]) | # shadow
         (bs[4]) | # snow
         (bs[5]) | # water
         (bs[6]) | # aerosol (only low quality)
         (bs[8]) | # subzero
         (bs[9]) | # saturation
-        (bs[10])) # High sun zenith flag
+        (bs[10]) | # illumination
+        (bs[11]) | # saturation
+        (bs[13]) | # slope
+        (bs[14])) # vapor
        == 1){
     return("flag") } else {
       return("valid")
@@ -82,6 +86,9 @@ fs_LND_filtered <- raw_fs %>%
   mutate(QAI = mask_idex) %>% 
   filter(QAI == "valid")
 ```
+
+Quite important to note here is that while the absolute number of pixels additionally filtered with more strict conditions applied is quite small, increasing these conditions did yield effective improvements in removing additional outlyers in the data (particularly evident in direct pixel scatter plot comparisons between LND05/07/08). Therefor the deliberate inclusions/exclusion of certain filtering criterion could disproportionately sway the final results of sensor comparisons and feature spaces. 
+
 
 ### Katjas method compairson
 
@@ -163,7 +170,7 @@ ggplot(na.omit(fs_LND), aes(doy, NDTI, color=year, group=year)) +
   theme_minimal()
 ```
 
-Similar story here, with NDTI decreasing over time
+Similar story here, with NDTI decreasing over time. NDTI is also positively associated with tillage, so the dip in the growing season is explained by more bare soil (tilled) locations being progressively covered by PV. Sudden increases during the growing season indicate a tilling event, where as a slow decline at the end of the growing season are more likely to indicate PV senescence. 
 
 ## data wrangel into long
 
@@ -247,14 +254,14 @@ ggplot(fs_LND_long, aes(reflectance, color=wavelength, color=wavelength)) +
 ggplot(fs_LND_long, aes(x = reflectance, y = sensor, fill = stat(x))) +
   geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
   scale_fill_viridis_c(name = "reflectance", option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, 15000)) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 75)) +
   theme_minimal() +
   facet_wrap(~wavelength)
 
 ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
   geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
   scale_fill_viridis_c(name = "reflectance", option = "D") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, 15000)) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 75)) +
   theme_minimal() +
   facet_wrap(~sensor)
   
@@ -439,15 +446,23 @@ ggplot(., aes(year, n_observation, color=sensor)) +
 fs_LND_obs_overview <- fs_LND %>% 
   group_by(month, year, sensor) %>% 
   summarise(n_observation = n()) %>%
-  mutate(timestamp = zoo::as.yearmon(paste0(month,"_", year), format="%m_%Y")) 
+  mutate(timestamp = zoo::as.yearmon(paste0(month,"_", year), format="%m_%Y"))
+```
+
+
+## Monthly time series
+```{r, cache=TRUE}
 
 ggplot(fs_LND_obs_overview, aes(timestamp, n_observation, color=sensor)) +
   geom_line(size=1) +
+  #geom_smooth( ) +
   scale_fill_continuous(type = "viridis") +
   scale_colour_viridis_d(option = "D") +
   scale_x_continuous(breaks=seq(1984,2022,2)) +
   theme_minimal()
+
 ```
+
 
 The acute fluctuations in observation numbers seems to stem from the fact that during winter months there is a lower observation density (plotted below)
 
@@ -468,20 +483,31 @@ ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=senso
   scale_fill_viridis_d(option = "D") +
   theme_minimal() +
   scale_x_continuous(breaks=seq(1,12,1)) +
-  scale_y_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(0, 1000)) +
   facet_wrap(~sensor)
 
 
 ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=sensor, color=sensor)) +
- geom_boxplot(alpha=0.3) +
- # geom_violin(alpha=0.3) +
+  geom_boxplot(alpha=0.3) +
   geom_jitter(alpha=0.3) +
  #geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
   scale_colour_viridis_d(option = "D") +
   scale_fill_viridis_d(option = "D") +
   theme_minimal() +
   scale_x_continuous(breaks=seq(1,12,1)) +
-  scale_y_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(0, 1000)) +
+  facet_wrap(~sensor)
+
+ggplot(fs_LND_obs_overview, aes(x=month, y=n_observation, group=month,fill=sensor, color=n_observation)) +
+ geom_boxplot(alpha=0.5) +
+ # geom_violin(alpha=0.3) +
+  geom_jitter(alpha=0.9) +
+ #geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
+  scale_colour_viridis_c(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_minimal() +
+  scale_x_continuous(breaks=seq(1,12,1)) +
+  scale_y_continuous(limits = c(0, 1000)) +
   facet_wrap(~sensor)
 
 
@@ -530,25 +556,6 @@ for (i in 1:4) {
            strip.text.y = element_text(size = 8, angle = 330))  +
     facet_wrap( ~obs_time_place) )
   }
-
-```
-
-
-Summary statistics for sensor variance between all sensors
-```{r, cache=TRUE}
-
-fs_LND_sensor_summary <- fs_LND_long %>% 
-  mutate(obs_time_place = paste0( round(doy, digits = -1),"_", year,"_",POINT_ID)) %>% 
-  group_by(obs_time_place) %>% 
-  filter(n() > 6) %>% 
-  group_by(obs_time_place, sensor) %>% 
-  summarise(SD = sd(reflectance))
-
-ggplot(fs_LND_sensor_summary, aes(x = SD, y = sensor, fill = stat(x))) +
-  geom_density_ridges_gradient(scale = 1, rel_min_height = 0.01) +
-  scale_fill_viridis_c(name = "SD", option = "D") +
- # scale_x_continuous(expand = c(0, 0), limits = c(0, 15000)) +
-  theme_minimal()
 
 ```
 
@@ -613,7 +620,7 @@ ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND08)) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   facet_wrap(~wavelength, 
-             #scales="free"
+             scales="free"
   ) 
 ```
 
@@ -663,7 +670,11 @@ ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND05)) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   facet_wrap(~wavelength, 
-             #scales="free"
+             scales="free"
   ) 
 ```
 
+
+Overall the correspondence between both Landsat 5/7 & 7/8 seems to be pretty good? R^2 values are around 90% and the MAE around a tick above 2%, which doesn't seem to drastic? In both comparison cases LND07 seemed to have (very) slightly lower reluctance values. Notable is the occasional occurrence of extreme outlyers across all the visable wavelengths in the spectra. Given that polluted pixels such as snow and clouds should have been removed through the QAI filters I am unsure what could be the source of these observed deviations (especially since they are not consistent across wavelengths). 
+
+Some float from the ideal 1-to-1 line can be likely explained by the two day buffer in doy matching between pixels. The relative infrequence of these extreme outlyers could be explained by a major LULC event such as mowing or harvesting occurring exactly in this potential two day difference in observation date? Yet this does not then adress why the large deviance in reflectance would only be observed for blue,green,red pixels and not NIR+ ones...
