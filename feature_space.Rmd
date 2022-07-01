@@ -24,6 +24,9 @@ library(viridis)
 library(tidyverse)
 library(patchwork)
 library(ggridges)
+library(ggpmisc)
+library(knitr)
+library(kableExtra)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -53,12 +56,12 @@ rev(as.numeric(intToBits(10240)[1:16]))
 
 ### filtering function
 
-```{r, cache=TRUE}
+```{r, cache=TRUE, echo=TRUE}
 # high confidence clouds or high confidence cloud shadows or fill values
 mask_medconf <- function(x){
   bs <- intToBits(x)
   if ( ((bs[1]) | # cloud
-        (bs[2]) | # low cloud confidence
+       # (bs[2]) | # low cloud confidence
         (bs[3]) | # shadow
         (bs[4]) | # snow
         (bs[5]) | # water
@@ -170,7 +173,7 @@ ggplot(na.omit(fs_LND), aes(doy, NDTI, color=year, group=year)) +
   theme_minimal()
 ```
 
-Similar story here, with NDTI decreasing over time. NDTI is also positively associated with tillage, so the dip in the growing season is explained by more bare soil (tilled) locations being progressively covered by PV. Sudden increases during the growing season indicate a tilling event, where as a slow decline at the end of the growing season are more likely to indicate PV senescence. 
+Similar story here, with NDTI decreasing over time. NDTI is also negatively associated with tillage, so the dip in the growing season is explained by more bare soil (tilled) locations being progressively covered by PV. Sudden decreases during the growing season indicate a tilling event, where as a slow decline at the end of the growing season are more likely to indicate PV senescence. 
 
 ## data wrangel into long
 
@@ -593,32 +596,40 @@ fs_LND_scatter <- fs_LND_loose |>
 
 ```{r, cache=TRUE}
 
+my.formula <- y ~ x
+
 fs_LND_scatter_LND_7_8 <- fs_LND_scatter |> select(-reflectance_LND04,-reflectance_LND05, -reflectance_LND09) |> 
   na.omit()
 
 ggplot(fs_LND_scatter_LND_7_8,aes(reflectance_LND07, reflectance_LND08)) +
-stat_bin_hex(bins = 100) +
+  stat_bin_hex(bins = 100) + 
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
   geom_abline(intercept=1,slope=1, linetype=2) +
   scale_colour_viridis_d(option = "D") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
-  annotate("text", x=75, y=105,
+  annotate("text", x=7, y=105,
            label= paste0("R2 =",round((cor((fs_LND_scatter_LND_7_8$reflectance_LND07), 
                                            (fs_LND_scatter_LND_7_8$reflectance_LND08),
                                            use="complete.obs")^2),2)), size=4.5, hjust=0) + 
   
-  annotate("text", x= 75, y=100, hjust=0, size=4.5,
+  annotate("text", x= 7, y=100, hjust=0, size=4.5,
            label= paste0("RMSE ==",round(sqrt(mean(((fs_LND_scatter_LND_7_8$reflectance_LND07)-
-                                                    (fs_LND_scatter_LND_7_8$reflectance_LND08))^2,
+                                                      (fs_LND_scatter_LND_7_8$reflectance_LND08))^2,
                                                    na.rm=TRUE)),2)), parse=TRUE)+
   
-  annotate("text", x=75, y= 95, size=4.5, hjust=0,
+  annotate("text", x=7, y= 95, size=4.5, hjust=0,
            label=paste0("Bias = ", round((mean((fs_LND_scatter_LND_7_8$reflectance_LND07), na.rm=TRUE) -
-                                          mean((fs_LND_scatter_LND_7_8$reflectance_LND08),na.rm=TRUE)),2)))+
+                                            mean((fs_LND_scatter_LND_7_8$reflectance_LND08),na.rm=TRUE)),2)))+
   
-  annotate("text", x=75, y=90,size=4.5,hjust=0, 
+  annotate("text", x=7, y=90,size=4.5,hjust=0, 
            label=paste0("MAE = ", round(mean(abs((fs_LND_scatter_LND_7_8$reflectance_LND07)-                                          
-                                                (fs_LND_scatter_LND_7_8$reflectance_LND08))),2)))
+                                                   (fs_LND_scatter_LND_7_8$reflectance_LND08))),2)))
 ```
 
 ## compairson by wavelength
@@ -626,6 +637,12 @@ stat_bin_hex(bins = 100) +
 ```{r, cache=TRUE}
 ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND08)) +
   stat_bin_hex(bins = 100) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
   geom_abline(intercept=1,slope=1, linetype=2) +
   scale_colour_viridis_d(option = "D") +
   scale_fill_continuous(type = "viridis") +
@@ -633,6 +650,27 @@ ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND08)) +
   facet_wrap(~wavelength, 
              scales="free"
   ) 
+
+kable(
+fs_LND_scatter |> 
+  select(-reflectance_LND04,-reflectance_LND05,-reflectance_LND09) |> 
+  group_by(wavelength) |> 
+  summarise(R2   = round((cor((reflectance_LND07), 
+                            (reflectance_LND08),
+                            use="complete.obs")^2),2),
+            
+            RMSE = round(sqrt(mean(((reflectance_LND07)-
+                                      (reflectance_LND08))^2, na.rm=TRUE)),2),
+            
+            Bias = round((mean((reflectance_LND07), na.rm=TRUE) -
+                            mean((reflectance_LND08), na.rm=TRUE)),2),
+            
+            MAE = round(mean(abs((reflectance_LND07)-
+                                   (reflectance_LND08)), na.rm=TRUE),2))
+) %>%
+  kable_styling(full_width = T)
+
+
 ```
 
 
@@ -651,21 +689,27 @@ stat_bin_hex(bins = 100) +
   scale_colour_viridis_d(option = "D") +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() + 
-  annotate("text", x=60, y=105,
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  annotate("text", x=7, y=105,
            label= paste0("R2 =",round((cor((fs_LND_scatter_LND_5_7$reflectance_LND07), 
                                            (fs_LND_scatter_LND_5_7$reflectance_LND05),
                                            use="complete.obs")^2),2)), size=4.5, hjust=0) + 
   
-  annotate("text", x= 60, y=100, hjust=0, size=4.5,
+  annotate("text", x= 7, y=100, hjust=0, size=4.5,
            label= paste0("RMSE ==",round(sqrt(mean(((fs_LND_scatter_LND_5_7$reflectance_LND07)-
                                                     (fs_LND_scatter_LND_5_7$reflectance_LND05))^2,
                                                    na.rm=TRUE)),2)), parse=TRUE)+
   
-  annotate("text", x=60, y= 95, size=4.5, hjust=0,
+  annotate("text", x=7, y= 95, size=4.5, hjust=0,
            label=paste0("Bias = ", round((mean((fs_LND_scatter_LND_5_7$reflectance_LND07), na.rm=TRUE) -
                                           mean((fs_LND_scatter_LND_5_7$reflectance_LND05),na.rm=TRUE)),2)))+
   
-  annotate("text", x=60, y=90,size=4.5,hjust=0, 
+  annotate("text", x=7, y=90,size=4.5,hjust=0, 
            label=paste0("MAE = ", round(mean(abs((fs_LND_scatter_LND_5_7$reflectance_LND07)-
                                                 (fs_LND_scatter_LND_5_7$reflectance_LND05))),2))) 
 
@@ -676,6 +720,12 @@ stat_bin_hex(bins = 100) +
 ```{r, cache=TRUE}
 ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND05)) +
   stat_bin_hex(bins = 100) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
   geom_abline(intercept=1,slope=1, linetype=2) +
   scale_colour_viridis_d(option = "D") +
   scale_fill_continuous(type = "viridis") +
@@ -683,6 +733,27 @@ ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND05)) +
   facet_wrap(~wavelength, 
              scales="free"
   ) 
+
+kable(
+fs_LND_scatter |> 
+  select(-reflectance_LND04,-reflectance_LND08,-reflectance_LND09) |> 
+  group_by(wavelength) |> 
+  summarise(R2   = round((cor((reflectance_LND07), 
+                            (reflectance_LND05),
+                            use="complete.obs")^2),2),
+            
+            RMSE = round(sqrt(mean(((reflectance_LND07)-
+                                      (reflectance_LND05))^2, na.rm=TRUE)),2),
+            
+            Bias = round((mean((reflectance_LND07), na.rm=TRUE) -
+                            mean((reflectance_LND05), na.rm=TRUE)),2),
+            
+            MAE = round(mean(abs((reflectance_LND07)-
+                                   (reflectance_LND05)), na.rm=TRUE),2))
+) %>%
+  kable_styling(full_width = T)
+
+
 ```
 
 
