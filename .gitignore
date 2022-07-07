@@ -28,3 +28,4 @@ vignettes/*.pdf
 .Renviron
 scripts_git.Rproj
 HU_SHK.Rproj
+data
