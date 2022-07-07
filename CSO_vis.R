@@ -4,7 +4,7 @@ library(sf)
 library(viridis)
 library(tmap)
 library(tidyverse)
-library(magick)
+library(magick)   # used to create gifs (process currently outsourced to bash scripts)
 library(rasterVis)
 library(patchwork)
 
@@ -13,10 +13,10 @@ library(patchwork)
 # CSO number
  
 link <- "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_NUM.vrt.ovr"
-CSO_NUM <- rast(link)
-years <- c(1982:2021)
-names(CSO_NUM) <- years
-# add z component
+CSO_NUM <- rast(link) # read in CSO layers as a terra raster object
+years <- c(1982:2021) # create a vector of observation years
+names(CSO_NUM) <- years # name layers with corresponding year value
+# add terra style z component 
 years <- seq(as.Date('1982-01-01'), as.Date('2021-01-01'), by='year')
 time(CSO_NUM) <-  years
 
@@ -24,7 +24,7 @@ time(CSO_NUM) <-  years
 #            filetype='GTiff')
 
 # crop rater to speed up data exporlation and vis
-e <- ext(0.4, 0.9, 0.4, 0.9)
+e <- ext(0.4, 0.9, 0.4, 0.9) # currently on a 1x1 grid, due to the compressed pyramid that is created via force
 CSO_NUM <- crop(CSO_NUM, e)
 
 # test plot of map
@@ -56,9 +56,12 @@ time(CSO_S2) <-  years
 # test plot of map
 plot(CSO_S2, legend=F, col = viridis(n=30,option="D"), range=c(0,70))
 
+# CSO spatial and statisitcal visualization ----
 
+# basic visualization using base R ----
 
 # map plots
+# Note that all maps are set to idential color pallete ranges 
 plot(CSO_NUM[[c(3:18)]], legend=F, col = viridis(n=30,option="D"), range=c(0,35))
 plot(CSO_NUM[[c(19:35)]], legend=F, col = viridis(n=30,option="D"),  range=c(0,35))
 plot(CSO_NUM[[c(36:40)]], legend=F, col = viridis(n=30,option="D"),  range=c(0,35))
@@ -81,18 +84,25 @@ boxplot(CSO_NUM[[c(19:35)]], main = "CSO count", xlab = "n", ylab= "Frequency",
 density(CSO_NUM[[c(3:18)]], main = "CSO count", xlab = "n", ylab= "Frequency", xaxt = "n")
 density(CSO_NUM[[c(19:35)]], main = "CSO count", xlab = "n", ylab= "Frequency", xaxt = "n")
 
+
+# Custom visualization ----
+
 # map with geograpic density
 rasterVis::levelplot(CSO_NUM[[20]], par.settings = viridisTheme)
-rasterVis::levelplot(CSO_NUM[[20]], par.settings = viridisTheme, contour=TRUE)
+# alternative map vis option with contour lines. 
+rasterVis::levelplot(CSO_NUM[[20]], par.settings = viridisTheme, contour=TRUE) 
 
+# histogram
 rasterVis::histogram(CSO_NUM[[20]], maxpixels = 1e+01)
 
+# density 
 rasterVis::densityplot(CSO_NUM[[c(3:40)]], #maxpixels = 1e+03, 
                        par.settings = viridisTheme)
 
+# Box and whiskar plot
 bwplot(CSO_NUM[[c(3:40)]],  maxpixels = 1e+01, par.settings = viridisTheme)
 
-
+# visualization of CSO average
 plot(CSO_AVG[[c(3:18)]], legend=F, col = viridis(n=30,option="D"), range=c(1,365))
 plot(CSO_AVG[[c(19:35)]], legend=F, col = viridis(n=30,option="D"), range=c(1,365))
 plot(CSO_AVG[[c(36:40)]], legend=F, col = viridis(n=30,option="D"), range=c(1,365))
@@ -102,19 +112,28 @@ hist(CSO_AVG[[c(3:18)]], main = "CSO count", xlab = "n", ylab= "Frequency", col 
 hist(CSO_AVG[[c(19:35)]], main = "CSO count", xlab = "n", ylab= "Frequency",
      col = "wheat",  breaks = 30, xaxt = "n")
 
-# advances data vis
+# advanced data vis ----
 # conversion of SpatRaster to df
 
+# CSO  NUM ----
+
+# Convert to data frame
 df_CSO_NUM_wide <- CSO_NUM[[c(3:40)]] %>% as.data.frame(xy = TRUE)
 
 # random subset sample 
+## used for exploratory data vis and to ease computational costs
 CSO_NUM_subset <- spatSample(CSO_NUM, size=1000, method="random", replace=FALSE, xy=T)
 
 df_CSO_NUM_long <- CSO_NUM_subset %>% 
-  select(-X1982, -X1983) %>% 
+  # deselect years with no observations of DE
+  select(-X1982, -X1983) %>%  
+  # pivot into a R freindly long formate
   pivot_longer(cols= c(X1984:X2021), names_to = "year", values_to = "NUM") %>% 
+  # Clean year values
   mutate(year = str_remove(year, "X"))
 
+# basic plot of the distribution of sampled plots.
+# Can be used to inform how dense the subset of CSO observations is
 ggplot(df_CSO_NUM_long, aes(x,y)) +
   geom_point() +
   theme_minimal()
@@ -179,7 +198,7 @@ library(ggridges)
   scale_x_continuous(expand = c(0, 0), limits = c(0, 40)) +
   theme_minimal() )
   
-# vis S2
+# S2 NUM ----
 
 # random subset sample 
 CSO_S2_subset <- spatSample(CSO_S2, size=8000, method="random", replace=FALSE, xy=T)
