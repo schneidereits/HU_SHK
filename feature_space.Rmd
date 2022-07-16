@@ -763,46 +763,6 @@ Overall the correspondence between both Landsat 5/7 & 7/8 seems to be pretty goo
 Some float from the ideal 1-to-1 line can be likely explained by the two day buffer in doy matching between pixels. The relative infrequence of these extreme outlyers could be explained by a major LULC event such as mowing or harvesting occurring exactly in this potential two day difference in observation date? Yet this does not then adress why the large deviance in reflectance would only be observed for blue,green,red pixels and not NIR+ ones...
 
 
-# test vis for tsi output
-
-# plot raw images
-```{r, cache=TRUE, eval=FALSE}
-
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/X0060_Y0040/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
-
-tsi <- rast(link)
-
-plot(tsi)
-
-tsi_df <- as.data.frame(tsi)
-
-```
-
-# save images and construct gif
-```{r, cache=TRUE, eval=FALSE}
-
-for (i in c(1:#length(names(tsi))
-            10)) {
-  
-  # Step 1: Call the pdf command to start the plot
-  png(file = paste0("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/ts_gif/plot_", i, ".png")) #,   # The directory you want to save the file in
-   # width = 12, # The width of the plot in inches
-    #height = 12) # The height of the plot in inches
-
-  
-  
-plot(tsi[[i]])
-
-# Step 3: Run dev.off() to create the file
-dev.off()
-  
-  
-
-}
-
-
-```
-
 
 
 
