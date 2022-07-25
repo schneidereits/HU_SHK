@@ -54,7 +54,7 @@ rev(as.numeric(intToBits(0)[1:16]))
 rev(as.numeric(intToBits(10240)[1:16]))  
 ```
 
-### filtering function
+### Filtering function
 
 ```{r, cache=TRUE, echo=TRUE}
 # high confidence clouds or high confidence cloud shadows or fill values
@@ -153,7 +153,7 @@ fs_LND <- fs_LND_filtered %>%
 ```
 
 
-# spectra vis
+# Spectra vis
 
 ## NDVI time series
 ```{r, cache=TRUE}
@@ -176,7 +176,7 @@ ggplot(na.omit(fs_LND), aes(doy, NDTI, color=year, group=year)) +
 
 Similar story here, with NDTI decreasing over time. NDTI is also negatively associated with tillage, so the dip in the growing season is explained by more bare soil (tilled) locations being progressively covered by PV. Sudden decreases during the growing season indicate a tilling event, where as a slow decline at the end of the growing season are more likely to indicate PV senescence. 
 
-## data wrangel into long
+## Data wrangel into long
 
 ```{r, cache=TRUE}
 fs_LND_long <- fs_LND %>% 
@@ -192,7 +192,7 @@ fs_LND_long <- fs_LND %>%
 ```
 
 
-## simple mean reflectance over time
+## Simple mean reflectance over time
 ```{r, cache=TRUE}
 ggplot(fs_LND_long, aes(wavelength_num, reflectance, color=year, group=year)) +
    # geom_smooth(formula = y ~ s(x, bs = "cs", k=6)) +
@@ -205,7 +205,7 @@ ggplot(fs_LND_long, aes(wavelength_num, reflectance, color=year, group=year)) +
 When plotting a simple mean of spectra across years it can be seen that more recent years dont defaco have higher reflectance values across the entire electromagnetic spectrum
 
 
-## boxplot
+## Boxplot
 
 ```{r, cache=TRUE}
 ggplot(fs_LND_long, aes(wavelength, reflectance, color=sensor)) +
@@ -217,7 +217,7 @@ ggplot(fs_LND_long, aes(wavelength, reflectance, color=sensor)) +
 
 Looks like lots of extreme values (even post QAI filter), *but* when looking at the next density plot section, you can that relatively speaking, these extreme outlying values are exceedinly rare and marginal.
 
-## density
+## Density
 
 ```{r, cache=TRUE}
 
@@ -252,7 +252,7 @@ ggplot(fs_LND_long, aes(reflectance, color=wavelength, color=wavelength)) +
 
 ```
 
-## ridges
+## Ridges
 
 ```{r, cache=TRUE}
 ggplot(fs_LND_long, aes(x = reflectance, y = sensor, fill = stat(x))) +
@@ -272,9 +272,9 @@ ggplot(fs_LND_long, aes(x = reflectance, y = wavelength, fill = stat(x))) +
 ```
 
 
-# feature space vis
+# Feature space vis
 
-## import reference data
+## Import reference data
 
 ```{r, cache=TRUE}
 reference_spectra <- read.csv("data/feature_space/sli_gen_dark_soils_0p4.csv",
@@ -289,7 +289,7 @@ ggplot(reference_spectra, aes(NDVI, SWIR_ratio, color = cover)) +
   theme_minimal() 
 ```
 
-## plot complete data
+## Plot complete data
 
 ```{r, cache=TRUE}
 # No dissagregation
@@ -304,7 +304,7 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
 
 Here we can see that there are two dense zones in the spectral feature spaces. The smaller and fainter zone is predominately populated by landsat 7 pixels (clearly seen in the following plot)
 
-## facet by sensor
+## Facet by sensor
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   stat_bin_hex(bins = 200) +
@@ -318,7 +318,7 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
 
 Here we can see that the spectral library fits particularly well to Landsat 8 (probably do to the fact that is was created using lansat 8 pixels?). 
 
-## facet by month
+## Facet by month
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
   stat_bin_hex(bins = 100) +
@@ -332,7 +332,7 @@ ggplot(fs_LND, aes(NDVI, SWIR_ratio)) +
 
 Here we can also see that across all sensors, the spectral library seems to triangulate the data points better during growing season months. 
 
-## facet by year
+## Facet by year
 
 _Displayed with only point per reference class to improve interpretability_ 
 
@@ -348,12 +348,14 @@ ggplot(., aes(NDVI, SWIR_ratio)) +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
   facet_wrap(~year)
+
+
 ```
 
 ### 2001-2022
 ```{r, cache=TRUE, warning=FALSE}
 # FROM 2001-2022
-fs_LND |> filter(year>2000) %>%
+fs_LND |> filter(year>2001) %>%
 ggplot(., aes(NDVI, SWIR_ratio)) +
   stat_bin_hex(bins = 100) +
   geom_point(data=reference_spectra[c(1,3,25),], aes(NDVI, SWIR_ratio), color ="red") +
@@ -364,6 +366,211 @@ ggplot(., aes(NDVI, SWIR_ratio)) +
   facet_wrap(~year)
 
 ```
+
+## Feature space by sensor and year
+
+### Summerarised boxplot overview
+
+```{r, cache=TRUE}
+ggplot(fs_LND, aes(x=, y=NDVI/SWIR_ratio, group=year, fill=sensor, color=sensor)) +
+  geom_boxplot(alpha=0.3) +
+ # geom_jitter(alpha=0.3) +
+ #geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_minimal() +
+#  scale_x_continuous(breaks=seq(1,12,1)) +
+ # scale_y_continuous(limits = c(0, 1000)) +
+  facet_wrap(~sensor, scales = "free_x")
+```
+
+Here is a simple boxplot overview per sensor over time. To aggregate the the NVDI and SWIR-ratio of the regular feature space scatter plot a simple ratio between NDVI and SWIR-ratio was taken (NDVI/SWIR_ratio). Overall the mean ratio and distribution of values seems to be relatively consistent, with the exceptions of some occasional outlines. The years 2003 and 2018 show exceptionally large deviations from the rest of the timeseries. Yet when comparing these years between different sensors it can be seen that this dip is consistent for multiple sensors, potentially indicating that this deviation yearly weather (etc) related phenomenon and not an artifact resulting from sensor instability?
+
+_The following plots contain feature space scatter plots, split by year and sensor. Additionally I included trend lines and their formulas to (hopefully) improve the comparison and interpretation of trends in the feature spaces between the years. I found that comparing the slopes and intersects of the fitted regression lines between years helps get a picture of sensor stability. The dotted black line represents the overall regression line computed across all sensors and years combined and should provide a base line to check years/sensor combinations to. _
+
+### Landsat 4
+```{r, cache=TRUE}
+my.formula <- y ~ x
+
+fs_LND |> filter(sensor =="LND04") %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 200) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               size = 3,
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+Surprisingly given the limited data availability overall measurements seem to be stable (outlyer 1991, but also a fluke year)
+
+
+### Landsat 5 1985:1995
+
+
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND05",
+                 year %in% c(1985:1995)) %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 200) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               size = 2.5,
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+### Landsat 5 1995:2005
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND05",
+                 year %in% c(1995:2005)) %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_bin_hex(bins = 200) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               size = 2.5,
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+### Landsat 5 2005:2011
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND05",
+                 year %in% c(2005:2011)) %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_bin_hex(bins = 200) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               size = 2.5,
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+Overall the picture for landsat 5 is a bit more mixed with the intersect being relatively stable, but there are some bigger deviations in year to year fitted trend lines. ALso based on visual interpretation it seems like the pitch relative to the base line is not consitant (ie that it doesnt not shift up and down parralell to the base line, but that the angle of difference changes (if that makes sence)). Additionally, it seems like SWIR_ratio values drift up with time, slightly pulling the feature space flame north.  
+
+### Landsat 7 1999:2009
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND07",
+                 year %in% c(1999:2009)) %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_bin_hex(bins = 200) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               size =2.5, 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+### Landsat 7 2009:2022
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND07",
+                 year %in% c(2009:2022)) %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_bin_hex(bins = 200) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               size =2.5, 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+Simularly to landsat 5, landsat 7 has a relativley stable intersect with deviations in year to year fitted trend lines. The fitted regressions consistently seem to be above the overall aggregated tendline.
+
+
+### Landsat 8
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND08") %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_bin_hex(bins = 200) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
+### Landsat 9
+```{r warning=FALSE, cache=TRUE}
+fs_LND |> filter(sensor =="LND09") %>%
+  ggplot(., aes(NDVI, SWIR_ratio)) +
+  geom_abline(intercept=.78,slope=-0.5, linetype=2) +
+  stat_bin_hex(bins = 200) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) +
+  facet_wrap(~year)
+```
+
 
 ## NDTI feature space
 
@@ -380,7 +587,7 @@ ggplot(fs_LND, aes(NDVI, NDTI)) +
 #  scale_y_continuous(expand = c(0, 0), limits = c(0, 1.2)) 
 ```
 
-## facet by sensor
+## Facet by sensor
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, NDTI)) +
   stat_bin_hex(bins = 200) +
@@ -392,7 +599,7 @@ ggplot(fs_LND, aes(NDVI, NDTI)) +
   facet_wrap(~sensor)
 ```
 
-## facet by month
+## Facet by month
 ```{r, cache=TRUE}
 ggplot(fs_LND, aes(NDVI, NDTI)) +
   stat_bin_hex(bins = 100) +
@@ -482,7 +689,7 @@ ggplot(fs_LND_obs_overview, aes(timestamp, n_observation, color=sensor)) +
 The acute fluctuations in observation numbers seems to stem from the fact that during winter months there is a lower observation density (plotted below)
 
 
-## observation density by month
+## Observation density by month
 
 _(same data with some different vis options)_
 
@@ -576,7 +783,7 @@ for (i in 1:4) {
 
 
 
-# scatterplots 
+# Scatterplots 
 
 
 
@@ -633,7 +840,7 @@ ggplot(fs_LND_scatter_LND_7_8,aes(reflectance_LND07, reflectance_LND08)) +
                                                    (fs_LND_scatter_LND_7_8$reflectance_LND08))),2)))
 ```
 
-## compairson by wavelength
+## Compairson by wavelength
 
 ```{r, cache=TRUE}
 ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND08)) +
@@ -716,7 +923,7 @@ stat_bin_hex(bins = 100) +
 
 ```
 
-## compairson by wavelength
+## Compairson by wavelength
 
 ```{r, cache=TRUE}
 ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND05)) +

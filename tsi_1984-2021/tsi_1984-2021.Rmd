@@ -54,10 +54,14 @@ plot(mask_GL)
 # Full mosaic
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.vrt.ovr"
 
-# Single tile
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0053_Y0046/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+# Single tile case day_16_sigma_8_16_32
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+# Single tile case day_8_sigma_8_16_32
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_8_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
 tsi_raw <- rast(link)
+
 
 setMinMax(tsi_raw) # set MinMax for spatRaster
 
@@ -73,7 +77,14 @@ tsi_na_index <- minmax(tsi_raw) |>
 tsi_na_index <- as.vector(tsi_na_index$id)
 
 # subset tsi object with only layers containing values
-tsi <- tsi_raw[[tsi_na_index]]
+tsi <- tsi_raw[[tsi_na_index]] 
+
+    # filter out reflectance values below and above 0-100 % range
+tsi <- tsi |> 
+  filter(across(1:length(names(tsi)), ~ . > 0),
+         across(1:length(names(tsi)), ~ . < 10000))
+
+
 
 length(names(tsi_raw)) - length(names(tsi))
 ```
@@ -124,7 +135,7 @@ knitr::include_graphics("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_
 
 ### data manipulation and subsample creation
 ```{r, cache=TRUE, eval=TRUE}
-tsi_df <- terra::as.data.frame(tsi[[c(600:834)]], xy = TRUE, na.rm=T) |> 
+tsi_df <- terra::as.data.frame(tsi[[c(290:300)]], xy = TRUE, na.rm=T) |> 
   slice_sample(n=10)
 
 tsi_df_long <- tsi_df |> 
