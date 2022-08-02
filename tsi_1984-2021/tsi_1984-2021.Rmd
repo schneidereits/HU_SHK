@@ -35,7 +35,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## test visualizazion of GreenLand masks
 
-```{r test visualizazion of GreenLand masks, chache=FALSE, eval=FALSE}
+```{r, chache=FALSE, eval=FALSE}
 
 
 link <- "/data/Dagobah/greengrass/grassland_ger/01_CTM_GL_mask_17-19/GL_mask_2017-2019.tif"
@@ -49,10 +49,10 @@ plot(mask_GL)
 
 # test vis for tsi output
 
-## Import and data wrangeling of TSI images 
+## Import TSI images (single location) 
 
 
-```{r plot raw images, cache=TRUE, eval=TRUE}
+```{r eval=TRUE, cache=TRUE, results = 'hide'}
 # Full mosaic
 #link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.vrt.ovr"
 
@@ -60,74 +60,121 @@ plot(mask_GL)
 #link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt.ovr"
 
 # Single tile base case
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.tif"
+
+tsi_base_raw <- rast(link)
 
 # Single tile case day_16_sigma_8_16_32
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
+tsi_day_16_sigma_8_16_32_raw <- rast(link)
+
 # Single tile case day_8_sigma_8_16_32
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_8_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+tsi_day_8_sigma_8_16_32_raw <- rast(link)
 
 # Single tile case day_16_sigma_4_8_16
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_4_8_16/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
+tsi_day_16_sigma_4_8_16_raw <- rast(link)
 
+tsi_list <- list(tsi_base_raw, tsi_day_16_sigma_8_16_32_raw, tsi_day_16_sigma_4_8_16_raw, tsi_day_8_sigma_8_16_32_raw)
 
+tsi_obs_length <- list()
+lapply(seq_along(tsi_list),
+       function(i) 
+       tsi_obs_length[i] <<-  length(names(tsi_list[[i]]))
+       )
 ```
 
+## test vis of TSI
 
-```{r plot raw images, cache=TRUE, eval=TRUE}
-# Full mosaic
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.vrt.ovr"
+```{r, cache=TRUE, eval=FALSE}
 
-# Single tile case day_16_sigma_8_16_32
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+# Set a "plan" for how the code should run.
+plan(multisession, workers = 4)
 
-# Single tile case day_8_sigma_8_16_32
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_8_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+# This does run in parallel!
+future_map(seq_along(tsi_list), function(i)  
+  terra::plot(tsi_list[[i]][[10:10]] )
+  )
 
-#  base case
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt.ovr"
+lapply(seq_along(tsi_list),
+       function(i) plot(tsi_list[[i]][[10:18]])
+       )
+```
 
-tsi_raw <- rast(link)
-# peak at tsi_raw rast
-plot(tsi_raw[[10:13]])
+## data wrangeling of TSI images 
 
+### Compute and set min and max values for tsi cases 
+```{r, cache=FALSE, eval=TRUE}
 
-setMinMax(tsi_raw) # set MinMax for spatRaster
+lapply(seq_along(tsi_list),
+       function(i) 
+      tsi_list[[i]] <<-  setMinMax(tsi_list[[i]])
+)
+```
 
+### remove all NA layers 
+```{r eval=TRUE, warning=FALSE, cache=TRUE, results='hide'}
 # create filter out all layers that dont contain any values
-tsi_na_index <- minmax(tsi_raw) |> 
-  as.data.frame() |> 
-  slice(1) |> 
-  pivot_longer(everything()) |> 
-  mutate(id = row_number()) |> 
-  na.omit()
+tsi_na_index <- list()
+lapply(seq_along(tsi_list),
+       function(i) 
+         
+         tsi_na_index[i] <<- minmax(tsi_list[[i]]) |> 
+         as.data.frame() |> 
+         slice(1) |> 
+         pivot_longer(everything()) |> 
+         mutate(id = row_number()) |> 
+         na.omit()
+)
 
 # convert into index vector
-tsi_na_index <- as.vector(tsi_na_index$id)
+lapply(seq_along(tsi_list),
+       function(i) 
+        tsi_na_index[[i]] <<- as.vector(tsi_na_index[[i]])
+         
+)
 
 # subset tsi object with only layers containing values
-tsi <- tsi_raw[[tsi_na_index]] 
+lapply(seq_along(tsi_list),
+       function(i) 
+         tsi_list[[i]] <<- tsi_list[[i]][[ tsi_na_index[[i]] ]] 
+)
+
 
     # filter out reflectance values below and above 0-100 % range
-tsi <- tsi |> 
-  filter(across(1:length(names(tsi)), ~ . > 0),
-         across(1:length(names(tsi)), ~ . < 10000))
+lapply(seq_along(tsi_list),
+       function(i) 
+         tsi_list[[i]] <- tsi_list[[i]] |> 
+  filter(across(1:length(names(tsi_list[[i]])), ~ . > 0),
+         across(1:length(names(tsi_list[[i]])), ~ . < 10000))
+)
 
 
-
-length(names(tsi_raw)) - length(names(tsi))
 ```
 
+### Check NA layer occurance
+```{r, cache=TRUE, eval=FALSE}
 
-```{r, cache=TRUE, eval=TRUE}
-print(paste( round((length(names(tsi_raw)) / length(names(tsi))), digits=4), "% of layers consisted completely of NA values (n=", (length(names(tsi_raw)) - length(names(tsi))), "out of", length(names(tsi_raw)), ")")) 
+
+lapply(seq_along(tsi_list),
+       function(i) 
+       tsi_obs_length[[i]] - length(names(tsi_list[[i]]))
+)
+
+lapply(seq_along(tsi_list),
+       function(i) 
+print(paste( round(( tsi_obs_length[i] / length(names(tsi_list[[i]]))), digits=4), "% of layers consisted completely of NA values (n=", ( tsi_obs_length[i] - length(names(tsi_list[[i]]))), "out of",  tsi_obs_length[i], ")")) 
+
+)
 
 ```
 
 ### test for R tile merging 
-```{r}
+```{r, eval=FALSE}
 link_a <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
 link_b <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0052/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
@@ -163,9 +210,15 @@ plot(ab[[c(10:13)]], legend=F, col = viridis(n=100,option="D"),
 ```{r plot raw images, cache=TRUE, eval=TRUE}
 #rasterVis::levelplot(tsi[[c(24)]], par.settings = viridisTheme)
 #rasterVis::levelplot(tsi[[c(1,4,24,25:35)]], par.settings = viridisTheme)
-plot(tsi[[c(1:10)]], legend=F, col = viridis(n=100,option="D"),
+
+
+lapply(seq_along(tsi_list),
+       function(i) 
+      plot(tsi_list[[i]][[c(1:10)]], legend=F, col = viridis(n=100,option="D"),
      range=c(0,10000)
     )
+)
+
 ```
 
 ## gif image creation
@@ -190,30 +243,42 @@ dev.off()
 }
 ```
 
-```{r testing, chache=FALSE}
+```{r, chache=FALSE}
 knitr::include_graphics("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/ts_gif/day_16_sigma_8_16_32/ts_16_8_16_32.gif")
 ```
 
 ## spectra visualization
 
 ### data manipulation and subsample creation
-```{r, cache=TRUE, eval=TRUE}
-tsi_df <- terra::as.data.frame(tsi[[c(290:300)]], xy = TRUE, na.rm=T) |> 
-  slice_sample(n=10)
+```{r, cache=TRUE, eval=TRUE, results='hide'}
+tsi_df <- list()
+lapply(seq_along(tsi_list),
+       function(i) 
+         tsi_df[[i]] <<- terra::as.data.frame(tsi_list[[i]][[c(1:700)]], xy = TRUE, na.rm=F) |>
+         # filter out rows that only contain na
+         filter_at(vars(-x,-y), any_vars(! is.na(.))) |> 
+         # random subset for data vis
+         slice_sample(n=10)
+)
 
-tsi_df <- terra::as.data.frame(tsi_raw[[c(3:30)]], xy = TRUE, na.rm=T) |> 
-  slice_sample(n=10)
-
-tsi_df_long <- tsi_df |> 
-  pivot_longer(cols = c(3:ncol(tsi_df)), names_to = "timestamp") |> 
-  mutate(xy= paste0(x,"_",y)) |> 
-  mutate(date = as.Date(timestamp, format="%Y%m%d"),
-         year = lubridate::year(date))
+# create long version of df with unique and formatted location and date cols
+tsi_df_long <- list()
+lapply(seq_along(tsi_list),
+       function(i) 
+         tsi_df_long[[i]] <<- tsi_df[[i]] |> 
+         pivot_longer(cols = c(3:ncol(tsi_df[[i]])), names_to = "timestamp") |> 
+         mutate(xy= paste0(x,"_",y)) |> 
+         mutate(date = as.Date(timestamp, format="%Y%m%d"),
+                year = lubridate::year(date))
+       
+)
 ```
 
 ### plot faceted time series 
-```{r, cache=TRUE, eval=TRUE}
-ggplot(tsi_df_long, aes(date, value, group=xy, color=xy)) +
+```{r, cache=TRUE, eval=TRUE, warning=FALSE}
+lapply(seq_along(tsi_list),
+       function(i) 
+ggplot(tsi_df_long[[i]], aes(date, value, group=xy, color=xy)) +
   geom_line() +
   geom_point(size=0.5) +
   theme_classic() +
@@ -222,10 +287,12 @@ ggplot(tsi_df_long, aes(date, value, group=xy, color=xy)) +
   theme(axis.text.x = element_text(angle = 45,  hjust=1),
         legend.position="none") +
   facet_wrap(~year, scales = "free_x")
+
+)
 ```
 
 ### plot time series with formatted dates
-```{r, cache=TRUE, eval=TRUE}
+```{r, cache=TRUE, eval=FALSE}
 ggplot(tsi_df_long, aes(date, value, group=xy, color=xy)) +
   geom_line() +
   theme_classic() +
