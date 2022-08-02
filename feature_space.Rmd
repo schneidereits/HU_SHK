@@ -386,7 +386,7 @@ ggplot(fs_LND, aes(x=, y=NDVI/SWIR_ratio, group=year, fill=sensor, color=sensor)
 
 Here is a simple boxplot overview per sensor over time. To aggregate the the NVDI and SWIR-ratio of the regular feature space scatter plot a simple ratio between NDVI and SWIR-ratio was taken (NDVI/SWIR_ratio). Overall the mean ratio and distribution of values seems to be relatively consistent, with the exceptions of some occasional outlines. The years 2003 and 2018 show exceptionally large deviations from the rest of the timeseries. Yet when comparing these years between different sensors it can be seen that this dip is consistent for multiple sensors, potentially indicating that this deviation yearly weather (etc) related phenomenon and not an artifact resulting from sensor instability?
 
-_The following plots contain feature space scatter plots, split by year and sensor. Additionally I included trend lines and their formulas to (hopefully) improve the comparison and interpretation of trends in the feature spaces between the years. I found that comparing the slopes and intersects of the fitted regression lines between years helps get a picture of sensor stability. The dotted black line represents the overall regression line computed across all sensors and years combined and should provide a base line to check years/sensor combinations to. _
+_The following plots contain feature space scatter plots, split by year and sensor. The dotted black line represents the overall regression computed across all sensors and years combined and should provide a base line to check years/sensor combinations scatter plots against._
 
 ### Landsat 4
 ```{r, cache=TRUE}
@@ -394,16 +394,17 @@ my.formula <- y ~ x
 
 fs_LND |> filter(sensor =="LND04") %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
-  stat_bin_hex(bins = 200) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               size = 3,
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+ stat_bin_hex(bins = 50) +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -411,7 +412,7 @@ fs_LND |> filter(sensor =="LND04") %>%
   facet_wrap(~year)
 ```
 
-Surprisingly given the limited data availability overall measurements seem to be stable (outlyer 1991, but also a fluke year)
+
 
 
 ### Landsat 5 1985:1995
@@ -421,16 +422,17 @@ Surprisingly given the limited data availability overall measurements seem to be
 fs_LND |> filter(sensor =="LND05",
                  year %in% c(1985:1995)) %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
-  stat_bin_hex(bins = 200) +
+  stat_bin_hex(bins = 50) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               size = 2.5,
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -443,16 +445,17 @@ fs_LND |> filter(sensor =="LND05",
 fs_LND |> filter(sensor =="LND05",
                  year %in% c(1995:2005)) %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 40) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_bin_hex(bins = 200) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               size = 2.5,
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -465,16 +468,17 @@ fs_LND |> filter(sensor =="LND05",
 fs_LND |> filter(sensor =="LND05",
                  year %in% c(2005:2011)) %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 40) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_bin_hex(bins = 200) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               size = 2.5,
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -482,23 +486,23 @@ fs_LND |> filter(sensor =="LND05",
   facet_wrap(~year)
 ```
 
-Overall the picture for landsat 5 is a bit more mixed with the intersect being relatively stable, but there are some bigger deviations in year to year fitted trend lines. ALso based on visual interpretation it seems like the pitch relative to the base line is not consitant (ie that it doesnt not shift up and down parralell to the base line, but that the angle of difference changes (if that makes sence)). Additionally, it seems like SWIR_ratio values drift up with time, slightly pulling the feature space flame north.  
 
 ### Landsat 7 1999:2009
 ```{r warning=FALSE, cache=TRUE}
 fs_LND |> filter(sensor =="LND07",
                  year %in% c(1999:2009)) %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 50) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_bin_hex(bins = 200) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               size =2.5, 
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -511,16 +515,17 @@ fs_LND |> filter(sensor =="LND07",
 fs_LND |> filter(sensor =="LND07",
                  year %in% c(2009:2022)) %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
+ stat_bin_hex(bins = 50) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_bin_hex(bins = 200) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               size =2.5, 
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -528,22 +533,24 @@ fs_LND |> filter(sensor =="LND07",
   facet_wrap(~year)
 ```
 
-Simularly to landsat 5, landsat 7 has a relativley stable intersect with deviations in year to year fitted trend lines. The fitted regressions consistently seem to be above the overall aggregated tendline.
+
 
 
 ### Landsat 8
 ```{r warning=FALSE, cache=TRUE}
 fs_LND |> filter(sensor =="LND08") %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 50) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_bin_hex(bins = 200) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +
@@ -555,15 +562,17 @@ fs_LND |> filter(sensor =="LND08") %>%
 ```{r warning=FALSE, cache=TRUE}
 fs_LND |> filter(sensor =="LND09") %>%
   ggplot(., aes(NDVI, SWIR_ratio)) +
+  stat_bin_hex(bins = 40) +
   geom_abline(intercept=.78,slope=-0.5, linetype=2) +
-  stat_bin_hex(bins = 200) +
-  stat_smooth(method = "lm", formula = my.formula, color="red") +
-  stat_poly_eq(formula = my.formula, 
-               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
-               parse = TRUE,
-               label.x =1.2,
-               label.y =1.05) +
-  # geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red") +
+  # stat_smooth(method = "lm", formula = my.formula, color="red") +
+  # stat_poly_eq(formula = my.formula, 
+  #              aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+  #              size = 2.5,
+  #              parse = TRUE,
+  #              label.x =1.2,
+  #              label.y =1.05) +
+  geom_point(data=reference_spectra, aes(NDVI, SWIR_ratio), color ="red",
+             size=0.6, alpha=0.9) +
   scale_fill_continuous(type = "viridis") +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0), limits = c(-0.2, 1)) +

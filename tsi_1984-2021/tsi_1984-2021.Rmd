@@ -49,7 +49,33 @@ plot(mask_GL)
 
 # test vis for tsi output
 
-# Import and data wrangeling of TSI images 
+## Import and data wrangeling of TSI images 
+
+
+```{r plot raw images, cache=TRUE, eval=TRUE}
+# Full mosaic
+#link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.vrt.ovr"
+
+#  base case
+#link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt.ovr"
+
+# Single tile base case
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+# Single tile case day_16_sigma_8_16_32
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+# Single tile case day_8_sigma_8_16_32
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_8_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+# Single tile case day_16_sigma_4_8_16
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_4_8_16/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+
+
+```
+
+
 ```{r plot raw images, cache=TRUE, eval=TRUE}
 # Full mosaic
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.vrt.ovr"
@@ -60,7 +86,12 @@ link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/da
 # Single tile case day_8_sigma_8_16_32
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_8_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
+#  base case
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt.ovr"
+
 tsi_raw <- rast(link)
+# peak at tsi_raw rast
+plot(tsi_raw[[10:13]])
 
 
 setMinMax(tsi_raw) # set MinMax for spatRaster
@@ -92,6 +123,38 @@ length(names(tsi_raw)) - length(names(tsi))
 
 ```{r, cache=TRUE, eval=TRUE}
 print(paste( round((length(names(tsi_raw)) / length(names(tsi))), digits=4), "% of layers consisted completely of NA values (n=", (length(names(tsi_raw)) - length(names(tsi))), "out of", length(names(tsi_raw)), ")")) 
+
+```
+
+### test for R tile merging 
+```{r}
+link_a <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0047/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+link_b <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_16_32/X0054_Y0052/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+
+a <- rast(link_a)
+b <- rast(link_b)
+
+ab <- merge(a,b)
+
+plot(ab[[c(10:13)]], legend=F, col = viridis(n=100,option="D"),
+     range=c(0,10000)
+    )
+
+object.size((ab))
+
+writeRaster(ab, "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/test_mosaic_r.tif",
+            # overwrite=TRUE,
+            datatype = "INT4S",
+            filetype='GTiff')
+
+
+link_ab <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/test_mosaic_r.tif"
+
+ab <- rast(link_ab)
+plot(ab[[c(10:13)]], legend=F, col = viridis(n=100,option="D"),
+     range=c(0,10000)
+    )
 
 ```
 
@@ -136,6 +199,9 @@ knitr::include_graphics("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_
 ### data manipulation and subsample creation
 ```{r, cache=TRUE, eval=TRUE}
 tsi_df <- terra::as.data.frame(tsi[[c(290:300)]], xy = TRUE, na.rm=T) |> 
+  slice_sample(n=10)
+
+tsi_df <- terra::as.data.frame(tsi_raw[[c(3:30)]], xy = TRUE, na.rm=T) |> 
   slice_sample(n=10)
 
 tsi_df_long <- tsi_df |> 
