@@ -70,27 +70,23 @@ link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/da
 
 tsi_day_16_sigma_8_16_32_raw <- rast(link)
 
-# Single tile case day_8_sigma_8_16_32
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_8_sigma_8_16_32/X0057_Y0040/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
-
-tsi_day_8_sigma_8_16_32_raw <- rast(link)
 
 # Single tile case day_16_sigma_8_8_8_16_16_16_64
 link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_8_8_16_16_16_64/X0057_Y0040/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
-tsi_day_16_sigma_8_8_8_16_16_16_64<- rast(link)
+tsi_day_16_sigma_8_8_8_16_16_16_64_raw <- rast(link)
 
-# Single tile case day_16_sigma_4_8_16
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_4_8_16/X0057_Y0040/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
+# Single tile case day_16_sigma_8_8_8_16_16_16_32_64
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/day_16_sigma_8_8_8_16_16_16_32_64/X0057_Y0040/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSI.tif"
 
-tsi_day_16_sigma_4_8_16_raw <- rast(link)
-
-
+tsi_day_16_sigma_8_8_8_16_16_16_32_64_raw <- rast(link)
 
 
-tsi_list <- list(tsi_base_raw, tsi_day_16_sigma_8_16_32_raw, tsi_day_16_sigma_4_8_16_raw, tsi_day_16_sigma_8_8_8_16_16_16_64, tsi_day_8_sigma_8_16_32_raw)
+# combine TSIs into a list to facilitate functional loop wise data operations
 
-cases <- c("base_case", "day_16_sigma_8_16_32", "day_16_sigma_4_8_16", "day_16_sigma_8_8_8_16_16_16_64", "day_8_sigma_8_16_32")
+tsi_list <- list(tsi_base_raw, tsi_day_16_sigma_8_16_32_raw, tsi_day_16_sigma_8_8_8_16_16_16_64_raw, tsi_day_16_sigma_8_8_8_16_16_16_32_64_raw)
+
+cases <- c("base_case", "day_16_sigma_8_16_32", "day_16_sigma_8_8_8_16_16_16_64", "day_16_sigma_8_8_8_16_16_16_32_64")
 names(tsi_list) <- cases
 
 tsi_obs_length <- list()
@@ -106,10 +102,9 @@ lapply(seq_along(tsi_list),
 create stack for direct location comparison
 ```{r, results='hide'}
 tsi_stack <- c(tsi_list[[1]][[c(430)]],
-               tsi_list[[2]][[c(647)]],
-               tsi_list[[3]][[c(554)]],
-               tsi_list[[4]][[c(675)]],
-               tsi_list[[5]][[c(1294)]])
+               tsi_list[[2]][[c(675)]],
+               tsi_list[[3]][[c(675)]],
+               tsi_list[[4]][[c(675)]])
 ```
 
 ## static maps
@@ -130,12 +125,12 @@ lapply(seq_along(tsi_list),
 ## Interactive map
 ```{r, cache=FALSE, eval=TRUE}
 
-pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFCC"), values(tsi_list[[4]][[600:600]]),
+pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFCC"), values(tsi_list[[4]][[675]]),
   na.color = "transparent")
 
 leaflet() |>
   addTiles() |>
-  addRasterImage(tsi_list[[4]][[600:600]], group = "show_layer") |> 
+  addRasterImage(tsi_list[[4]][[675]], group = "show_layer") |> 
   addLegend(pal = pal, 
             values = values(tsi_list[[4]][[600:600]]),
             title = "Reflectance") |> 
@@ -151,33 +146,11 @@ leaflet() |>
 
 ## Compute and set min and max values for tsi cases 
 ```{r, , eval=TRUE}
-system.time(
+
 lapply(seq_along(tsi_list),
        function(i) 
       tsi_list[[i]] <<-  setMinMax(tsi_list[[i]])
 )
-)
-```
-
-
-```{r, , eval=FALSE}
-### alternatice slower na layer computation method
-# 
-# na_index   <- list("base_case"=c(), "day_16_sigma_8_16_32"=c(), "day_16_sigma_4_8_16"=c(), "day_16_sigma_8_8_8_16_16_16_64"=c(), "day_8_sigma_8_16_32"=c())
-# 
-# system.time(
-#   
-# lapply(seq_along(tsi_list),
-#        function(i) 
-#          
-#          for (j in c(1:nlyr(tsi_list[[i]]))) {
-#            
-#            na_index[[i]][[j]] <-  minmax(is.na(foo[[i]][[j]]))[1]
-#            
-#          }
-# )
-# 
-# )
 
 ```
 
@@ -243,6 +216,15 @@ lapply(seq_along(tsi_list),
 ```
 
 
+### create updated stack for direct location comparison
+(ie because NA filter removed some layers and dates dont correspond when using the previous index)
+```{r, results='hide'}
+tsi_stack <- c(tsi_list[[1]][[c(430)]],
+               tsi_list[[2]][[c(648)]],
+               tsi_list[[3]][[c(675)]],
+               tsi_list[[4]][[c(675)]])
+```
+
 ```{r plot raw images, cache=FALSE, eval=FALSE, fig.show ='asis', results='hide'}
 #rasterVis::levelplot(tsi[[c(24)]], par.settings = viridisTheme)
 #rasterVis::levelplot(tsi[[c(1,4,24,25:35)]], par.settings = viridisTheme)
@@ -250,14 +232,12 @@ lapply(seq_along(tsi_list),
 
 lapply(seq_along(tsi_list),
        function(i) 
-         plot(tsi_list[[i]][[c(430:430)]], 
-                        legend=T, col = viridis(n=100,option="D"),
-                        range=c(0,10000), 
-                      plg=list(title= paste(names(tsi_list[i]), "\n", names(tsi_list[[i]][430:430]]))
-                                 ))
+         plot(tsi_stack[[i]], 
+              legend=T, col = viridis(n=100,option="D"),
+              range=c(0,10000), 
+              plg=list(title= paste(names(tsi_list[i]), "\n", names(tsi_list[[i]][[674]]) ))
          )
-
-
+)
 ```
 
 # generation of sample points (performed in Rstudio GUI)
@@ -308,10 +288,10 @@ roi_list <- list(watt_GL, large, medium,small)
 # sampled_points <- rbind(watt_GL_df, large_df, medium_df, small_df)
 
 #save sampled points
-#saveRDS(sampled_points, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/sampled_points.rds")
+#saveRDS(sampled_points, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/sampled_points.rds")
 
 # load sampled points
-sampled_points <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/sampled_points.rds")
+sampled_points <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/sampled_points.rds")
 
 
 ```
@@ -338,15 +318,6 @@ lapply(seq_along(roi_list),
 )
 
 
-```
-
-### create stack for direct location comparison
-```{r, results='hide'}
-tsi_stack <- c(tsi_list[[1]][[c(430)]],
-               tsi_list[[2]][[c(647)]],
-               tsi_list[[3]][[c(554)]],
-               tsi_list[[4]][[c(675)]],
-               tsi_list[[5]][[c(1294)]])
 ```
 
 ### compairison of TSI cases for each location
@@ -391,6 +362,7 @@ for (i in 1:length(names(tsi_list))) {
 }
 
 
+
 # create a unique length of processing chuncks based on the number of observations in each scenario
 processing_chunks <- start[[1]][c(1:length(start))] # initial list
 # loop though each case
@@ -409,15 +381,15 @@ for (j in 1:length(start)) {
 ### uncomment to execute
 # lapply(seq_along(tsi_list),
 #        function(i)
-# 
+#
 #          for (j in c(1:length(processing_chunks[[i]]))) {
-# 
+#
 #            tsi_df[[i]][[j]] <<- terra::as.data.frame(tsi_list[[i]][[c(processing_chunks[[i]][[j]][1]:
 #                                                                         processing_chunks[[i]][[j]][2])]],
 #                                                      xy = TRUE, na.rm=F) |>
 #              # filter out rows that only contain na
 #              filter_at(vars(-x,-y), any_vars(! is.na(.))) |>
-# 
+#
 #              left_join(sampled_points) |>
 #               filter(!is.na(type))
 #          }
@@ -437,7 +409,7 @@ for (j in 1:length(start)) {
 #saveRDS(tsi_df_joined, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/tsi_df_joined.rds")
 
 # load tsi df
-tsi_df_joined <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/tsi_df_joined.rds")
+tsi_df_joined <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_df_joined.rds")
 
 # create long version of df with unique and formatted location and date cols
 tsi_df_long <- list()
