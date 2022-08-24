@@ -8,7 +8,7 @@ library(ggridges)
 
 # data import and wrangel ----
 
-raw_fs <- read.csv("data/feature_space/20220602_FS_LS4_LS5_LS7_LS8_LS9_1985_2022.csv")
+raw_fs <- read.csv("/data/Dagobah/greengrass/schnesha/02_feature_space/20220602_FS_LS4_LS5_LS7_LS8_LS9_1985_2022.csv")
 
 ## QA band filtering ----
 
