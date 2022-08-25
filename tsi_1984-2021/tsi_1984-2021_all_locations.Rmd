@@ -149,12 +149,23 @@ leaflet() |>
 # data wrangeling of TSI images 
 
 ## Compute and set min and max values for tsi cases 
-```{r, , eval=TRUE}
+```{r, , eval=FALSE}
 
 lapply(seq_along(tsi_list),
        function(i) 
       tsi_list[[i]] <<-  setMinMax(tsi_list[[i]])
 )
+
+# 
+# lapply(1:length(tsi_list), function(i)
+# 
+#   terra::writeRaster(tsi_list[[i]],
+#                      filename= paste0("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/postproccesed_tifs/",
+#                                       names(tsi_list[i]),"_postprocssed.tif"),
+#                      filetype='GTiff',
+#                      overwrite=TRUE)
+# 
+# )
 
 ```
 
@@ -183,6 +194,9 @@ lapply(seq_along(tsi_list),
          tsi_na_index[[i]] <<- as.vector(tsi_na_index[[i]])
        
 )
+
+#saveRDS(tsi_na_index, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_na_index.rds")
+tsi_na_index <- readRDS( file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_na_index.rds")
 
 # subset tsi object with only layers containing values
 lapply(seq_along(tsi_list),
@@ -262,20 +276,6 @@ roi_names <- c("Niedersachsen", "Mecklenburg Vorpommern", "Nordrhein-Westfalen I
 # )
 # names(roi_list) <- roi_names
 
-# Niedersachsen           <- terra::sel(tsi_list[[2]][[c(674)]])
-# Mecklenburg_Vorpommern  <- terra::sel(tsi_list[[2]][[c(674)]])
-# Nordrhein-Westfalen_I   <- terra::sel(tsi_list[[2]][[c(674)]])
-# Nordrhein-Westfalen_II  <- terra::sel(tsi_list[[2]][[c(674)]])
-# Brandenburg             <- terra::sel(tsi_list[[2]][[c(674)]])
-# Rheinland-Pfalz         <- terra::sel(tsi_list[[2]][[c(674)]])
-# Hessen                  <- terra::sel(tsi_list[[2]][[c(674)]])
-# Sachsen                 <- terra::sel(tsi_list[[2]][[c(674)]])
-# Mittelfranken           <- terra::sel(tsi_list[[2]][[c(674)]])
-# Niederbayern            <- terra::sel(tsi_list[[2]][[c(674)]])
-# Allgau                  <- terra::sel(tsi_list[[2]][[c(674)]])
-# Oberbayern              <- terra::sel(tsi_list[[2]][[c(674)]])
-
-
 
 #save roi sample points raster stack
 
@@ -295,36 +295,29 @@ roi_list <- list()
 for (i in 1:length(roi_names)) {
 
   link <- paste0("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/roi_sample_locations/",
-                                      names(roi_names[i]),".tif")
+                                      roi_names[i],".tif")
   
   roi_list[[i]] <- rast(link)
   
 }
-
+# assigen formal names to each element in list
 names(roi_list) <- roi_names
 
 
-# used to make raster stack (c() stack does not work due to extents not matching)
-#roi_list <- c(watt_GL, large, medium,small)
-roi_list <- list(watt_GL, large, medium,small)
- 
 # Convert each ROI to df
-
 roi_dfs <- list()
 lapply(1:length(roi_list), function(i)
   
   roi_dfs[[i]] <<- roi_list[[i]] |> as.data.frame(xy=T) |> select(x,y)  |> mutate(type=names(roi_list[i]),
                                                                                   x = as.integer(x),
                                                                                   y = as.integer(y))
-
-  
 )
 
 # Combine locations into single df
  sampled_points <- data.table::rbindlist(roi_dfs)
 
 #save sampled points
-saveRDS(sampled_points, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/sampled_points_DE.rds")
+#saveRDS(sampled_points, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/sampled_points_DE.rds")
 
 # load sampled points
 sampled_points <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/sampled_points_DE.rds")
@@ -344,7 +337,7 @@ knitr::include_graphics("~/Documents/R/HU_SHK/tsi_1984-2021/ROI_location_map.png
 
 lapply(seq_along(roi_list),
        function(i)
-         plot(tsi_list[[2]][[c(430:430)]],
+         plot(tsi_list[[3]][[c(430:430)]],
               legend=T, 
               col = viridis(n=100,option="D"),
               range=c(0,10000),
@@ -383,9 +376,8 @@ Due to C memory usage limit issues, the conversion from spatraster to spatial da
 
 ... works but is not a pretty workaround... 
 
+### Create processing Chunks
 ```{r, cache=FALSE, eval=TRUE, results='hide'}
-
-
 tsi_df   <- list("base_case"=c(), "day_16_sigma_8_16_32"=c(), "day_16_sigma_8_8_8_16_16_16_64"=c(), "day_16_sigma_8_8_8_16_16_16_32_64"=c())
 
 start <- list()
@@ -411,30 +403,15 @@ for (j in 1:length(start)) {
   }
   
 }
+```
 
-sub_sample <- spatSample(tsi_list[[i]][[430]], size=10000,
-                  method="regular", 
-                  na.rm=T ,
-                  as.points=T,
-                  values=T,  
-                  as.raster=T )
-
-plot(sub_sample)
-sub_sample_df <-terra::as.data.frame(sub_sample, geom="wkt") |> 
-  mutate(x = as.numeric(str_sub(geometry, 8,14)),
-         y = as.numeric(str_sub(geometry, 23,29))) |> 
-  select(-geometry)
-
-
-foo <- sub_sample_df |> left_join(sampled_points) |>
-              filter(!is.na(type))
-
-
-
-
+### Old method for spatrast to df convertion
+```{r, cache=FALSE, eval=TRUE, results='hide'}
 # Convert spat raster into df, via subset processing chunks
 
 ### uncomment to execute
+
+# OLD DF CONVERTSION METHOD
 lapply(seq_along(tsi_list),
        function(i)
 
@@ -450,23 +427,28 @@ lapply(seq_along(tsi_list),
               filter(!is.na(type))
          }
 )
+```
 
+# Spatrast to df converstion
+```{r, cache=FALSE, eval=FALSE, results='hide'}
+# NEW DF CONVERTION METHOD
 lapply(seq_along(tsi_list),
        function(i)
 
-         for (j in c(1:nlyr(tsi_list[[i]])
+         for (j in c(1:#2
+                     nlyr(tsi_list[[i]])
                      )) {
 sub_sample <- spatSample(tsi_list[[i]][[j]], size=100000,
-                  method="regular", 
+                  method="regular",
                   na.rm=T ,
                   as.points=T,
-                  values=T,  
+                  values=T,
                   as.raster=T )
 
 #plot(sub_sample)
-sub_sample_df <-terra::as.data.frame(sub_sample, geom="wkt") |> 
+sub_sample_df <-terra::as.data.frame(sub_sample, geom="wkt") |>
   mutate(x = as.numeric(str_sub(geometry, 8,14)),
-         y = as.numeric(str_sub(geometry, 23,29))) |> 
+         y = as.numeric(str_sub(geometry, 23,29))) |>
   select(-geometry)
 
 
@@ -476,9 +458,19 @@ tsi_df[[i]][[j]] <<- sub_sample_df |> left_join(sampled_points, by = c("x", "y")
 
  }
 )
+```
 
+### load output from converstion
+```{r, cache=FALSE, eval=FALSE, results='hide'}
+#save tsi df
+#saveRDS(tsi_df, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_DE_df.rds")
 
+# load tsi df
+tsi_df <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_DE_df.rds")
+```
 
+### Join tsi lists and reduce to single location
+```{r, cache=FALSE, eval=FALSE, results='hide'}
 # create join for list into df
 tsi_df_joined <- list()
  lapply(seq_along(tsi_df),
@@ -487,13 +479,19 @@ tsi_df_joined <- list()
           group_by(type) |>
           sample_n(1)
  )
+```
 
+### load output from join
+```{r, cache=FALSE, eval=FALSE, results='hide'}
 #save tsi df
-saveRDS(tsi_df_joined, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/tsi_DE_df_joined.rds")
+#saveRDS(tsi_df_joined, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_DE_df_joined.rds")
 
 # load tsi df
 tsi_df_joined <- readRDS("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_DE_df_joined.rds")
+```
 
+### Create long and formatted version of df for final vis 
+```{r, cache=FALSE, eval=FALSE, results='hide'}
 # create long version of df with unique and formatted location and date cols
 tsi_df_long <- list()
 lapply(seq_along(tsi_list),
@@ -508,6 +506,9 @@ lapply(seq_along(tsi_list),
        
 )
 ```
+
+
+# Visualization
 
 ## plot faceted time series 1984:2000
 ```{r, cache=FALSE, eval=TRUE, warning=FALSE}

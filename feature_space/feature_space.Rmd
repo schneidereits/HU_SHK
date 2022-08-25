@@ -848,3 +848,181 @@ dev.off()
 
 
 
+ope=1, linetype=2) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  annotate("text", x=7, y=105,
+           label= paste0("R2 =",round((cor((fs_LND_scatter_LND_7_8$reflectance_LND07), 
+                                           (fs_LND_scatter_LND_7_8$reflectance_LND08),
+                                           use="complete.obs")^2),2)), size=4.5, hjust=0) + 
+  
+  annotate("text", x= 7, y=100, hjust=0, size=4.5,
+           label= paste0("RMSE ==",round(sqrt(mean(((fs_LND_scatter_LND_7_8$reflectance_LND07)-
+                                                      (fs_LND_scatter_LND_7_8$reflectance_LND08))^2,
+                                                   na.rm=TRUE)),2)), parse=TRUE)+
+  
+  annotate("text", x=7, y= 95, size=4.5, hjust=0,
+           label=paste0("Bias = ", round((mean((fs_LND_scatter_LND_7_8$reflectance_LND07), na.rm=TRUE) -
+                                            mean((fs_LND_scatter_LND_7_8$reflectance_LND08),na.rm=TRUE)),2)))+
+  
+  annotate("text", x=7, y=90,size=4.5,hjust=0, 
+           label=paste0("MAE = ", round(mean(abs((fs_LND_scatter_LND_7_8$reflectance_LND07)-                                          
+                                                   (fs_LND_scatter_LND_7_8$reflectance_LND08))),2)))
+```
+
+## Compairson by wavelength
+
+```{r, cache=TRUE}
+ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND08)) +
+  stat_bin_hex(bins = 100) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  facet_wrap(~wavelength, 
+             scales="free"
+  ) 
+
+kable(
+fs_LND_scatter |> 
+  select(-reflectance_LND04,-reflectance_LND05,-reflectance_LND09) |> 
+  group_by(wavelength) |> 
+  summarise(R2   = round((cor((reflectance_LND07), 
+                            (reflectance_LND08),
+                            use="complete.obs")^2),2),
+            
+            RMSE = round(sqrt(mean(((reflectance_LND07)-
+                                      (reflectance_LND08))^2, na.rm=TRUE)),2),
+            
+            Bias = round((mean((reflectance_LND07), na.rm=TRUE) -
+                            mean((reflectance_LND08), na.rm=TRUE)),2),
+            
+            MAE = round(mean(abs((reflectance_LND07)-
+                                   (reflectance_LND08)), na.rm=TRUE),2))
+) %>%
+  kable_styling(full_width = T)
+
+
+```
+
+
+
+# Scatterplot of Landsat 5 and 7 specta
+
+```{r, cache=TRUE}
+
+fs_LND_scatter_LND_5_7 <- fs_LND_scatter |> select(-reflectance_LND04,-reflectance_LND08, -reflectance_LND09) |> 
+  na.omit()
+
+
+ggplot(fs_LND_scatter_LND_5_7, aes(reflectance_LND07, reflectance_LND05)) +
+stat_bin_hex(bins = 100) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() + 
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  annotate("text", x=7, y=105,
+           label= paste0("R2 =",round((cor((fs_LND_scatter_LND_5_7$reflectance_LND07), 
+                                           (fs_LND_scatter_LND_5_7$reflectance_LND05),
+                                           use="complete.obs")^2),2)), size=4.5, hjust=0) + 
+  
+  annotate("text", x= 7, y=100, hjust=0, size=4.5,
+           label= paste0("RMSE ==",round(sqrt(mean(((fs_LND_scatter_LND_5_7$reflectance_LND07)-
+                                                    (fs_LND_scatter_LND_5_7$reflectance_LND05))^2,
+                                                   na.rm=TRUE)),2)), parse=TRUE)+
+  
+  annotate("text", x=7, y= 95, size=4.5, hjust=0,
+           label=paste0("Bias = ", round((mean((fs_LND_scatter_LND_5_7$reflectance_LND07), na.rm=TRUE) -
+                                          mean((fs_LND_scatter_LND_5_7$reflectance_LND05),na.rm=TRUE)),2)))+
+  
+  annotate("text", x=7, y=90,size=4.5,hjust=0, 
+           label=paste0("MAE = ", round(mean(abs((fs_LND_scatter_LND_5_7$reflectance_LND07)-
+                                                (fs_LND_scatter_LND_5_7$reflectance_LND05))),2))) 
+
+```
+
+## Compairson by wavelength
+
+```{r, cache=TRUE}
+ggplot(fs_LND_scatter, aes(reflectance_LND07, reflectance_LND05)) +
+  stat_bin_hex(bins = 100) +
+  stat_smooth(method = "lm", formula = my.formula, color="red") +
+  stat_poly_eq(formula = my.formula, 
+               aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")), 
+               parse = TRUE,
+               label.x =1.2,
+               label.y =1.05) +
+  geom_abline(intercept=1,slope=1, linetype=2) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_continuous(type = "viridis") +
+  theme_minimal() +
+  facet_wrap(~wavelength, 
+             scales="free"
+  ) 
+
+kable(
+fs_LND_scatter |> 
+  select(-reflectance_LND04,-reflectance_LND08,-reflectance_LND09) |> 
+  group_by(wavelength) |> 
+  summarise(R2   = round((cor((reflectance_LND07), 
+                            (reflectance_LND05),
+                            use="complete.obs")^2),2),
+            
+            RMSE = round(sqrt(mean(((reflectance_LND07)-
+                                      (reflectance_LND05))^2, na.rm=TRUE)),2),
+            
+            Bias = round((mean((reflectance_LND07), na.rm=TRUE) -
+                            mean((reflectance_LND05), na.rm=TRUE)),2),
+            
+            MAE = round(mean(abs((reflectance_LND07)-
+                                   (reflectance_LND05)), na.rm=TRUE),2))
+) %>%
+  kable_styling(full_width = T)
+
+
+```
+
+
+Overall the correspondence between both Landsat 5/7 & 7/8 seems to be pretty good? R^2 values are around 90% and the MAE around a tick above 2%, which doesn't seem to drastic? In both comparison cases LND07 seemed to have (very) slightly lower reluctance values. Notable is the occasional occurrence of extreme outlyers across all the visable wavelengths in the spectra. Given that polluted pixels such as snow and clouds should have been removed through the QAI filters I am unsure what could be the source of these observed deviations (especially since they are not consistent across wavelengths). 
+
+Some float from the ideal 1-to-1 line can be likely explained by the two day buffer in doy matching between pixels. The relative infrequence of these extreme outlyers could be explained by a major LULC event such as mowing or harvesting occurring exactly in this potential two day difference in observation date? Yet this does not then adress why the large deviance in reflectance would only be observed for blue,green,red pixels and not NIR+ ones...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
