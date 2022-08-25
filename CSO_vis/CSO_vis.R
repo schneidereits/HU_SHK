@@ -12,7 +12,7 @@ library(patchwork)
 
 # CSO number
  
-link <- "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_NUM.vrt.ovr"
+link <- "/data/Dagobah/greengrass/schnesha/01_CSO_LND_1982-2021/mosaic/1982-2021_091-319-12_HL_CSO_LNDLG_NUM.vrt"
 CSO_NUM <- rast(link) # read in CSO layers as a terra raster object
 years <- c(1982:2021) # create a vector of observation years
 names(CSO_NUM) <- years # name layers with corresponding year value
@@ -20,6 +20,7 @@ names(CSO_NUM) <- years # name layers with corresponding year value
 years <- seq(as.Date('1982-01-01'), as.Date('2021-01-01'), by='year')
 time(CSO_NUM) <-  years
 
+# IF EXECUTED DO NOT USE THIS PATH
 #writeRaster(CSO_NUM, "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_NUM",
 #            filetype='GTiff')
 
@@ -32,7 +33,7 @@ plot(CSO_NUM[[20]], legend=F, col = viridis(n=30,option="D"), range=c(0,35))
 
 # CSO Average
 
-link <- "/Users/shawn/Documents/jobs/Humbolt/QGIS/1982-2021_091-319-12_HL_CSO_LNDLG_AVG.vrt.ovr"
+link <- "/data/Dagobah/greengrass/schnesha/01_CSO_LND_1982-2021/mosaic/1982-2021_091-319-12_HL_CSO_LNDLG_AVG.vrt"
 CSO_AVG <- rast(link)
 years <- c(1982:2021)
 names(CSO_AVG) <- years
@@ -45,7 +46,7 @@ plot(CSO_AVG[[20]], legend=F, col = viridis(n=30,option="D"), range=c(0,365))
 
 # Sentinal 2 CSO number
 
-link <- "/Users/shawn/Documents/jobs/Humbolt/QGIS/2017-2021_091-319-12_HL_CSO_SEN2L_NUM.vrt.ovr"
+link <- "/data/Dagobah/greengrass/schnesha/01_CSO_S2-2017-2021/mosaic/2017-2021_091-319-12_HL_CSO_SEN2L_NUM.vrt"
 CSO_S2 <- rast(link) 
 years <- c(2017:2021)
 names(CSO_S2) <- years
