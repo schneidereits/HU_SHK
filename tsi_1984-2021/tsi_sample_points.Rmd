@@ -1,0 +1,106 @@
+---
+title: "tsi_sample_points"
+output: html_document
+date: "`r Sys.Date()`"
+
+output: 
+  html_document: 
+    fig_width: 12
+    fig_height: 8
+    toc: yes
+    toc_float: yes
+    toc_collapsed: no
+    code_folding: hide
+    theme: united
+    highlight: tango
+    number_sections: yes
+    output_file: "tsi_1984-2021_DE.html"
+---
+
+```{r, cache=FALSE, setup, include=FALSE}
+# library
+library(terra)     # raster data manipulations
+library(sf)
+library(viridis)   # color pallets
+library(tidyverse) # data manipulation
+library(patchwork) # for grid visualization
+library(ggridges)  # ridge plots
+library(ggpmisc)
+library(knitr)
+library(kableExtra)
+library(rasterVis)
+library(tidyterra)
+library(leaflet)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Import stm
+```{r}
+
+
+STM_5_files <-list.files("/data/Dagobah/greengrass/00_GL_change/01_STM/5yrs/mosaic")
+STM_5 <- list()
+lapply(seq_along(STM_5_files),
+       function(i)
+         
+       STM_5[[i]] <<- rast( paste0("/data/Dagobah/greengrass/00_GL_change/01_STM/5yrs/mosaic/", STM_5_files[i]))
+       
+)
+
+cases <- c(str_remove(STM_5_files, c("1984-1990_060-304_HL_TSA_LNDLG_")))
+names(STM_5) <- cases 
+
+
+```
+
+
+### Import DE shp
+```{r}
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/DE_shp/vg2500_bld_EPSG3035.shp"
+
+DE <- read_sf(link)
+```
+
+```{r}
+
+plot(STM_5[[1]],
+       legend=T, col = viridis(n=100,option="D"),
+       #range=c(0,10000), 
+       ext = ext(DE),
+       plg=list(title= paste(names(STM_5[[1]]), "\n", names(STM_5[[1]]))
+       ))
+ plot(vect(DE), add=TRUE)
+
+```
+
+# Import sample points
+```{r}
+
+sample_points <-  st_read("/data/Dagobah/greengrass/00_GL_change/03_change_samples/01_sample/stratified_sample_rd_4000.gpkg") |> 
+  filter(!is.na(class),
+         class != 999) |> 
+  mutate(confidence= ifelse(is.na(confidence), 0, confidence))
+
+plot(vect(DE), add=TRUE)
+
+
+```
+
+## extract STM data for each point
+```{r}
+sample_points_STM <- terra::extract(STM_5[[1]], sample_points, xy=T, bind=T)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

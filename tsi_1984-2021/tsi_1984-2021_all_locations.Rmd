@@ -22,9 +22,9 @@ output:
 
 ```{r, cache=FALSE, setup, include=FALSE}
 # library
-library(terra)     # raster data maipulations
+library(terra)     # raster data manipulations
 library(sf)
-library(viridis)   # color palletes
+library(viridis)   # color pallets
 library(tidyverse) # data manipulation
 library(patchwork) # for grid visualization
 library(ggridges)  # ridge plots
@@ -49,7 +49,7 @@ The processing pipeline is build upon have a distinct raster for each Time serie
 
 
 #  base case
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt"
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1986-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt"
 tsi_base_raw <- rast(link)
 
 #  case day_16_sigma_8_16_32
@@ -86,6 +86,84 @@ link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/DE
 DE <- read_sf(link)
 ```
 
+## Import CSO data
+```{r, include=FALSE, eval=FALSE}
+link <- "/data/Dagobah/greengrass/schnesha/01_CSO_LND_1982-2021/CSO_LND_1982-2021_cropped_1km.tif"
+CSO_NUM <- rast(link) # read in CSO layers as a terra raster object
+years <- paste0("year_",c(1982:2021)) # create a vector of observation years
+#years <- c(1982:2021) # create a vector of observation years
+
+names(CSO_NUM) <- years # name layers with corresponding year value
+# add terra style z component 
+years <- seq(as.Date('1982-01-01'), as.Date('2021-01-01'), by='year')
+time(CSO_NUM) <-  years
+
+#CSO_NUM_aggregated <- aggregate(CSO_NUM, fact=33, cores=12)
+```
+
+### CSO for full Timeseries
+```{r, include=FALSE, eval=FALSE}
+rasterVis::levelplot(CSO_NUM, par.settings = viridisTheme)
+
+bwplot(CSO_NUM,  maxpixels = 1e+01, par.settings = viridisTheme)
+```
+
+### Example locational distribution of densities
+```{r, include=FALSE, eval=FALSE}
+rasterVis::levelplot(CSO_NUM[[20]], par.settings = viridisTheme)
+
+```
+
+## Observation density stats
+```{r}
+# obs_count<- list() 
+# for (i in seq_along(tsi_list)) {
+# obs_count[[i]] <- global(tsi_list[[i]], fun="notNA")
+#   
+# }
+
+base_case_obs_count <- readRDS(file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/case_obs_count.rds")
+
+for (i in seq_along(base_case_obs_count)) {
+base_case_obs_count[[i]] <- base_case_obs_count[[i]] |> mutate(case = names(tsi_list[i])) 
+
+ base_case_obs_count[[i]] <-  tibble::rownames_to_column(base_case_obs_count[[i]], "date")
+  
+}
+
+base_case_obs_count <- data.table::rbindlist(base_case_obs_count) |> 
+  rename(observation_density = notNA) |> 
+  mutate(date = str_sub(date,1,8),
+         date = as.Date(date, format="%Y%m%d"),
+         year = lubridate::year(date),
+         observation_density = as.numeric(observation_density),
+         observation_density = (observation_density/max(observation_density)) ) # convert to percent of max
+```
+
+### Time series of Observation density
+```{r}
+ggplot(base_case_obs_count, aes(date, observation_density, color=case)) +
+         geom_line(aes(group=case)) +
+         geom_point(size=0.5) +
+         theme_classic() +
+         scale_colour_viridis_d(option = "D") +
+         scale_x_date(date_breaks = "1 year", date_labels = "%y")+
+         theme_minimal() +
+         theme(axis.text.x = element_text(angle = 45,  hjust=1),
+               legend.position="bottom"
+         )+  facet_wrap(~case)
+ 
+ 
+ #   
+ # ggplot(base_case_obs_count, aes(date, observation_density, color= case,group = year)) +
+ #   geom_boxplot() +
+ #   theme_minimal() +
+ #   scale_x_date( date_labels = "%d-%m-%y")+
+ #   theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+ #   facet_wrap(~case)
+
+```
+
 
 # test vis of TSI
 
@@ -94,16 +172,16 @@ create stack for direct location comparison
 _unique index for each TSI case as number of layers differ between them_
 
 ```{r, results='hide'}
-tsi_stack <- c(tsi_list[[1]][[c(557)]],
-               tsi_list[[2]][[c(720)]],
-               tsi_list[[3]][[c(720)]],
-               tsi_list[[4]][[c(720)]])
 
+tsi_stack <- c(tsi_list[[1]]$`20000514_LND05`,
+               tsi_list[[2]]$`20000509`,
+               tsi_list[[3]]$`20000509`,
+               tsi_list[[4]]$`20000509`)
 
 ```
 
 ## static maps
-```{r, cache=FALSE, eval=TRUE, fig.show ='asis', results='hide'}
+```{r, cache=FALSE, eval=FALSE, fig.show ='asis', results='hide'}
 #de <- st_read("/data/Dagobah/dc/deu/vector/DEU.gpkg")
 
 #plot(tsi_list[[2]][[800:808]])
@@ -166,11 +244,11 @@ lapply(seq_along(tsi_list),
 # 
 # lapply(1:length(tsi_list), function(i)
 # 
-#   terra::writeRaster(tsi_list[[i]],
-#                      filename= paste0("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/postproccesed_tifs/",
-#                                       names(tsi_list[i]),"_postprocssed.tif"),
-#                      filetype='GTiff',
-#                      overwrite=TRUE)
+  # terra::writeRaster(tsi_list[[i]],
+  #                    filename= paste0("/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/postproccesed_tifs/",
+  #                                     names(tsi_list[i]),"_postprocssed.tif"),
+  #                    filetype='GTiff',
+  #                    overwrite=TRUE)
 # 
 # )
 
@@ -240,17 +318,6 @@ lapply(seq_along(tsi_list),
 ```
 
 
-### create updated stack for direct location comparison
-_(ie because NA filter removed some layers and dates dont correspond when using the previous index)_
-```{r, results='hide'}
-tsi_stack <- c(tsi_list[[1]][[c(550)]],
-               tsi_list[[2]][[c(718)]],
-               tsi_list[[3]][[c(720)]],
-               tsi_list[[4]][[c(720)]])
-
-
-```
-
 ```{r plot raw images, cache=FALSE, eval=FALSE, fig.show ='asis', results='hide'}
 #rasterVis::levelplot(tsi[[c(24)]], par.settings = viridisTheme)
 #rasterVis::levelplot(tsi[[c(1,4,24,25:35)]], par.settings = viridisTheme)
@@ -274,14 +341,14 @@ for (i in seq_along(tsi_list)) {
 # generation of sample points (performed in Rstudio GUI)
 
 ### Naming ROIs
-```{r generation of sample points, results='hide'}
-roi_names <- c("Niedersachsen", "Mecklenburg Vorpommern", "Nordrhein-Westfalen I",
-               "Nordrhein-Westfalen II", "Brandenburg", "Rheinland-Pfalz", "Hessen",
-               "Sachsen", "Mittelfranken", "Niederbayern", "Allgau", "Oberbayern")
+```{r Naming ROIs, results='hide'}
+roi_names <- c("Wesermarsch", "Greifswald", "Niederrhein",
+               "Münsterland", "Westhavelland", "Eifel", "Vogelsberg",
+               "Erzgebirge", "Mittelfranken", "Bayerischer_Wald", "Voralpen_Kempten", "Voralpen_Chiemsee")
 ```
 
 ### select the ROI for each location type
-```{r generation of sample points, results='hide', eval=FALSE}
+```{r select the ROI for each location type, results='hide', eval=FALSE}
 # select the ROI for each location type
 roi_list <- list()
 lapply(1:length(roi_names), function(i)
@@ -307,7 +374,7 @@ lapply(1:length(roi_list), function(i)
 
 ### Load the ROI for each location type
 
-```{r generation of sample points, results='hide', eval=TRUE}
+```{r Load the ROI for each location type, results='hide', eval=TRUE}
 #load sampled points
 roi_list <- list()
 for (i in 1:length(roi_names)) {
@@ -481,7 +548,7 @@ tsi_df[[i]][[j]] <<- sub_sample_df |> left_join(sampled_points, by = c("x", "y")
 )
 ```
 
-### load output from converstion
+### load output from convertion
 ```{r, cache=FALSE, eval=TRUE, results='hide'}
 #save tsi df
 #saveRDS(tsi_df, file = "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/R_objects/tsi_DE_df.rds")
@@ -524,6 +591,22 @@ tsi_df_joined_single_location <- readRDS("/data/Dagobah/greengrass/schnesha/03_R
 
 ### Create long and formatted version of df for final vis 
 ```{r, cache=FALSE, eval=TRUE, results='hide'}
+
+# create long version of df with unique and formatted location and date cols
+tsi_df_long <- list()
+lapply(seq_along(tsi_list),
+       function(i) 
+         tsi_df_long[[i]] <<- tsi_df_joined[[i]] |> 
+         pivot_longer(cols = c(-x,-y,-type), names_to = "timestamp") |> 
+         mutate(xy= paste0(x,"_",y)) |> 
+         mutate(date = as.Date(timestamp, format="%Y%m%d"),
+                year = lubridate::year(date),
+                value = if_else(value<0,0,as.numeric(value)),
+                case  = names(tsi_list[i]))
+       
+)
+
+
 # create long version of df with unique and formatted location and date cols
 tsi_df_single_location_long <- list()
 lapply(seq_along(tsi_list),
@@ -542,13 +625,15 @@ lapply(seq_along(tsi_list),
 
 # Visualization
 
-## plot faceted time series 1984:2000
+##  Faceted time series
+
+### plot faceted time series 1984:1999
 ```{r, cache=FALSE, eval=TRUE, warning=FALSE}
 lapply(seq_along(tsi_list),
        function(i) 
          
          tsi_df_single_location_long[[i]] %>%
-         filter(year<2001) %>%
+         filter(year<1999) %>%
          
          ggplot( aes(date, value, color=type, group=xy)) +
          geom_line(aes(group=type)) +
@@ -567,13 +652,13 @@ lapply(seq_along(tsi_list),
 ```
 
 
-## plot faceted time series 2001:2021
+### plot faceted time series 1999:2021
 ```{r, cache=FALSE, eval=TRUE, warning=FALSE}
 lapply(seq_along(tsi_list),
        function(i) 
          
          tsi_df_single_location_long[[i]] %>%
-         filter(year>2001) %>%
+         filter(year>=1999) %>%
          
          ggplot( aes(date, value, color=type, group=xy)) +
          geom_line(aes(group=type)) +
@@ -620,8 +705,62 @@ lapply(seq_along(tsi_list),
 ```
 
 
-## direct location and case compairison
+### Location and Case compairison using full df 
 ```{r, cache=FALSE, eval=TRUE, warning=FALSE}
+
+tsi_df_joined <- reduce(tsi_df_long, full_join)
+
+
+         
+        ggplot(tsi_df_joined, aes(x=type, y=value, group=type, fill= type, color=type)) +
+  geom_boxplot(alpha=0.3) +
+#  geom_jitter(alpha=0.1) +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 10000)) +facet_wrap(~case)
+
+
+
+         
+ggplot(tsi_df_joined, aes(value, color=type, fill=type)) +
+  geom_density(alpha = 0.05) +
+  #geom_jitter() +
+  scale_colour_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  scale_x_continuous(expand = c(0, 0)) +
+  #scale_y_continuous(expand = c(0, 0), limits = c(0, 0.02)) +
+  theme_minimal() +
+  guides(col = guide_legend(nrow = 3))+
+  theme(legend.position = "bottom")  +facet_wrap(~case)
+
+
+ggplot(tsi_df_joined, aes(x = value, y = type, fill = stat(x))) +
+  geom_density_ridges_gradient(scale = 1.2, rel_min_height = 0.01) +
+  scale_fill_viridis_c(name = "value", option = "D") +
+  #scale_x_continuous(expand = c(0, 0), limits = c(0, 75)) +
+  theme_minimal() +
+  facet_wrap(~case)
+
+
+ggplot(tsi_df_joined, aes(date, value, color=case, group = case)) +
+  #geom_line(aes(group=case), alpha=0.5) +
+  #geom_point(size=0.5, alpha=0.9) +
+  geom_smooth() +
+  theme_minimal() +
+  scale_colour_viridis_d(option = "D") +
+  scale_x_date(date_breaks = "4 year", date_labels = "%Y")+
+  theme(axis.text.x = element_text(angle = 45,  hjust=1),
+        legend.position="bottom") +
+  #  ggtitle(cases[i]) +
+  facet_grid(rows = vars(type), cols = vars(case), scales="free_y") 
+
+```
+
+## direct location and case compairison
+
+### Smoothed long term trend overview
+```{r, cache=FALSE, eval=FALSE, warning=FALSE}
 tsi_df_single_location_joined <- reduce(tsi_df_single_location_long, full_join)
 
 ggplot(tsi_df_single_location_joined, aes(date, value, color=case, group = xy)) +
@@ -639,7 +778,7 @@ ggplot(tsi_df_single_location_joined, aes(date, value, color=case, group = xy)) 
 #facet_grid(vars(drv), vars(cyl))
 ```
 
-## compairson of Base case values and interpolated TSI outputs 
+### compairson of Base case values and interpolated TSI outputs 
 ```{r, cache=FALSE, eval=TRUE, warning=FALSE}
 
 year_chunks <- round(seq(1984, 2021, length.out = 5))
