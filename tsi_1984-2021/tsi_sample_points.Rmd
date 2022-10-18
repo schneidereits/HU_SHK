@@ -35,7 +35,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-# Import stm
+# Import STMs
+
+## 5 Year
 ```{r}
 
 
@@ -54,6 +56,43 @@ names(STM_5) <- cases
 
 ```
 
+## 10 Year
+```{r}
+
+
+STM_10_files <-list.files("/data/Dagobah/greengrass/00_GL_change/01_STM/10yrs/mosaic")
+STM_10 <- list()
+lapply(seq_along(STM_10_files),
+       function(i)
+         
+       STM_5[[i]] <<- rast( paste0("/data/Dagobah/greengrass/00_GL_change/01_STM/10yrs/mosaic/", STM_5_files[i]))
+       
+)
+
+cases <- c(str_remove(STM_10_files, c("1984-1990_060-304_HL_TSA_LNDLG_")))
+names(STM_10) <- cases 
+
+
+```
+
+## 30 Year
+```{r}
+
+
+STM_30_files <-list.files("/data/Dagobah/greengrass/00_GL_change/01_STM/30yrs_stms/mosaic")
+STM_30 <- list()
+lapply(seq_along(STM_30_files),
+       function(i)
+         
+       STM_30[[i]] <<- rast( paste0("/data/Dagobah/greengrass/00_GL_change/01_STM/30yrs_stms/mosaic/", STM_30_files[i]))
+       
+)
+
+cases <- c(str_remove(STM_30_files, c("1984-1990_060-304_HL_TSA_LNDLG_")))
+names(STM_30) <- cases 
+
+
+```
 
 ### Import DE shp
 ```{r}
@@ -82,7 +121,6 @@ sample_points <-  st_read("/data/Dagobah/greengrass/00_GL_change/03_change_sampl
          class != 999) |> 
   mutate(confidence= ifelse(is.na(confidence), 0, confidence))
 
-plot(vect(DE), add=TRUE)
 
 
 ```

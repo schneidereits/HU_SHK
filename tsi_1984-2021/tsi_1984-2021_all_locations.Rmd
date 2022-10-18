@@ -49,7 +49,7 @@ The processing pipeline is build upon have a distinct raster for each Time serie
 
 
 #  base case
-link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1986-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt"
+link <- "/data/Dagobah/greengrass/schnesha/03_RBF_interpolation_LND_1982-2021/base_case/mosaic/1984-2021_001-365_HL_TSA_LNDLG_NDV_TSS.vrt"
 tsi_base_raw <- rast(link)
 
 #  case day_16_sigma_8_16_32
@@ -385,7 +385,7 @@ for (i in 1:length(roi_names)) {
   roi_list[[i]] <- rast(link)
   
 }
-# assigen formal names to each element in list
+# assign formal names to each element in list
 names(roi_list) <- roi_names
 
 
@@ -516,7 +516,7 @@ lapply(seq_along(tsi_list),
 
 ## Spatrast to df converstion
 
-Here the each spatrast object is subset to reduce the overall size of the created data frames. The full df are not needed, as only single locations are used for comparison between location. 
+Here the each spatrast object is subset to reduce the overall size of the created data frames. The full df are not needed, as in the following set only single locations are used for comparison between location. 
 
 ```{r, cache=FALSE, eval=FALSE, results='hide'}
 # NEW DF CONVERTION METHOD
@@ -526,7 +526,7 @@ lapply(seq_along(tsi_list),
          for (j in c(1:#2
                      nlyr(tsi_list[[i]])
                      )) {
-sub_sample <- spatSample(tsi_list[[i]][[j]], size=150000,
+sub_sample <- spatSample(tsi_list[[i]][[j]], size=50000,
                   method="regular",
                   na.rm=T ,
                   as.points=T,
@@ -535,7 +535,7 @@ sub_sample <- spatSample(tsi_list[[i]][[j]], size=150000,
 
 #plot(sub_sample)
 sub_sample_df <-terra::as.data.frame(sub_sample, geom="wkt") |>
-  mutate(x = as.numeric(str_sub(geometry, 8,14)),
+  mutate(x = as.numeric(str_sub(geometry, 8,14)), # extract the relevant geom string
          y = as.numeric(str_sub(geometry, 23,29))) |>
   select(-geometry)
 
@@ -803,6 +803,7 @@ tsi_df_single_location_joined %>%
   scale_x_date(date_breaks = "1 month", date_labels = "%m")+
   theme(axis.text.x = element_text(angle = 45,  hjust=1),
         legend.position="bottom") +
+  scale_y_continuous(limits = c(0, 10000)) +
   facet_grid(rows = vars(type), cols = vars(year), scales="free_x") 
 
 #  facet_wrap(~year, scales = "free_x") 
